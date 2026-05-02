@@ -189,10 +189,20 @@ class Form
         foreach ($definition->fields as $field) {
             if (array_is_list($field)) {
                 foreach ($field as $f) {
-                    $rules[$f['name']] = self::getFieldValidationRule($f);
+                    if($f['type'] == 'file')
+                    {
+                        $key = 'file.' . $f['name'];
+                    }
+                    else {$key = $f['name'];}
+                    $rules[$key] = self::getFieldValidationRule($f);
                 }
             } else {
-                $rules[$field['name']] = self::getFieldValidationRule($field);
+                if($f['type'] == 'file')
+                    {
+                        $key = 'file.' . $field['name'];
+                    }
+                    else {$key = $field['name'];}
+                $rules[$key] = self::getFieldValidationRule($field);
             }
         }
         return $rules;
@@ -225,13 +235,14 @@ class Form
         ];
 
         if (isset($rulesMap[$field['type']])) {
+            
             $rule .= '|' . $rulesMap[$field['type']];
         }
 
         return $rule;
     }
 
-    public static function addFieldGenParams($field)
+    protected static function addFieldGenParams($field)
     {
         $field['bs'] = config('uspdev-forms.bootstrapVersion');
         $field['required'] = isset($field['required']) ? $field['required'] : false;
