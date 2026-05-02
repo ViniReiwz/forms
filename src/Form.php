@@ -197,7 +197,7 @@ class Form
                     $rules[$key] = self::getFieldValidationRule($f);
                 }
             } else {
-                if($f['type'] == 'file')
+                if($field['type'] == 'file')
                     {
                         $key = 'file.' . $field['name'];
                     }
