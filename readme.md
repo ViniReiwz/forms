@@ -25,7 +25,7 @@ php artisan migrate
 
 ## Menu administrativo
 
-No arquivo `config/laravel-usp-theme.php`, adicione ou reposicione a chave `uspdev-forms` para mostrar o menu. Ele deve ser visível apenas para administradores.
+No arquivo `config/laravel-usp-theme.php`, a chave `uspdev-forms` faz o menu ficar visível apenas para administradores.
 
 ```php
 [
