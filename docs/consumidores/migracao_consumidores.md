@@ -94,9 +94,17 @@ try {
 Ao editar uma submissão existente, o consumidor passa a submissão para que a biblioteca use a `formDefinition` relacionada.
 
 ```php
-$html = Forms::render('parecer_final', ['method' => 'PUT'], $submission);
+// Exibição da tela de edição:
+$html = Forms::render('parecer_final', [
+    'action' => route('pareceres.update', $submission),
+    'method' => 'PUT',
+], $submission);
+
+// Processamento do envio da edição:
 $submission = Forms::update($request, $submission);
 ```
+
+No primeiro trecho, `method => 'PUT'` configura apenas o método HTTP do formulário HTML. A atualização da submissão acontece somente no segundo trecho, com `Forms::update()`.
 
 ## Passo 5: atualizar consultas
 

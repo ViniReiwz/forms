@@ -222,6 +222,8 @@ Esse fluxo valida os dados com as regras da definição, mas não cria `FormSubm
 
 ## 7. Editar uma submissão existente
 
+Esta ação exibe a tela de edição. Ela responde ao `GET /parecer/{submission}/edit`, renderiza o formulário preenchido e não altera dados no banco.
+
 ```php
 public function edit(FormSubmission $submission)
 {
@@ -236,7 +238,11 @@ public function edit(FormSubmission $submission)
 
 Ao receber uma submissão, a biblioteca renderiza usando `$submission->formDefinition`. Isso preserva a versão usada no envio original, mesmo que outra versão de `parecer_final` esteja ativa.
 
+Esse método apenas monta o formulário HTML da tela de edição. Ele não chama `update()` diretamente. A ligação com a atualização fica no HTML gerado: o atributo `action` aponta para `route('parecer.update', $submission)` e o `method => 'PUT'` faz o navegador enviar uma nova requisição `PUT` para essa rota quando o usuário envia o formulário.
+
 ## 8. Atualizar a submissão
+
+Esta ação processa o envio da tela de edição. Ela responde ao `PUT /parecer/{submission}` e chama `Forms::update()` para atualizar os dados.
 
 ```php
 public function update(Request $request, FormSubmission $submission)

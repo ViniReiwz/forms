@@ -5,37 +5,34 @@ Esta é a porta de entrada da documentação técnica do `uspdev/forms`. Os link
 ## Leitura recomendada
 
 1. [Conceitos e definição de formulário](definicoes/form_definition.md)  
-   A página descreve como `form_definitions` funciona, como `name + version` identifica uma versão concreta e como a versão ativa é escolhida.
+   Descreve como `form_definitions` funciona, como `name + version` identifica uma versão concreta e como a versão ativa é escolhida.
 
-2. [API pública via facade Forms](api/api_publica.md)  
-   A página lista os métodos oficiais para renderizar, submeter, atualizar, consultar e sincronizar formulários.
+2. [API via facade](api/api_facade.md)  
+   Lista os fluxos pela facade: renderização, submissão, atualização, consulta, filtros, arquivos, exclusão e sincronização.
 
-3. [API via facade Forms](api/facade_forms.md)  
-   A página descreve quando a facade funciona como porta de alto nível e quais métodos ela expõe.
+3. [API direta](api/api_direta.md)  
+   Espelha os mesmos fluxos pela abordagem direta em `FormDefinition` e `FormSubmission`.
 
-4. [Métodos diretos nos models](api/metodos_diretos.md)  
-   A página descreve quando métodos em `FormDefinition` e `FormSubmission` aparecem e como eles se relacionam com a facade.
+4. [Diferenças e equivalências entre API direta e facade](api/api_direta_facade_diferencas_equivalencias.md)  
+   Mostra os métodos equivalentes, os fluxos apenas via facade, os fluxos apenas via direta e os critérios de escolha entre as abordagens.
 
-5. [Equivalência entre facade e models](api/equivalencia_facade_model.md)  
-   A página mostra quais métodos existem nos dois lados, quais são apenas facade e quais são apenas model.
+5. [Caso de uso completo: parecer final](casos-de-uso/parecer_final.md)  
+   Mostra um exemplo de ponta a ponta: definição JSON, sync, renderização, submissão, validação, edição e consulta.
 
-6. [Caso de uso completo: parecer final](casos-de-uso/parecer_final.md)  
-   A página mostra um exemplo de ponta a ponta: definição JSON, sync, renderização, submissão, validação, edição e consulta.
+6. [Submissões, auditoria e relacionamento com definições](submissoes/modelagem.md)  
+   Mostra como `form_submissions` se relaciona com `form_definitions` e por que submissões antigas continuam presas à definição usada no envio.
 
-7. [Submissões, auditoria e relacionamento com definições](submissoes/modelagem.md)  
-   A página mostra como `form_submissions` se relaciona com `form_definitions` e por que submissões antigas continuam presas à definição usada no envio.
+7. [Validação de form_definition](definicoes/validacao_form_definition.md)  
+   Resume as regras aplicadas pelo `FormDefinitionSchemaValidator`.
 
-8. [Validação de form_definition](definicoes/validacao_form_definition.md)  
-   A página resume as regras aplicadas pelo `FormDefinitionSchemaValidator`.
+8. [Guia de migração para consumidores](consumidores/migracao_consumidores.md)  
+   Descreve a migração de sistemas que usam `uspdev/forms`, incluindo bibliotecas consumidoras como `uspdev/workflow`.
 
-9. [Guia de migração para consumidores](consumidores/migracao_consumidores.md)  
-   A página descreve a migração de sistemas que usam `uspdev/forms`, incluindo bibliotecas consumidoras como `uspdev/workflow`.
+9. [Breaking changes](refactor/breaking_changes.md)  
+   Resume as mudanças incompatíveis da nova versão.
 
-10. [Breaking changes](refactor/breaking_changes.md)  
-   A página resume as mudanças incompatíveis da nova versão.
-
-11. [Decisões do refactor](refactor/decisoes-refactor.md)  
-   A página reúne as decisões aprovadas e as alternativas descartadas durante o refactor.
+10. [Decisões do refactor](refactor/decisoes-refactor.md)  
+   Reúne as decisões aprovadas e as alternativas descartadas durante o refactor.
 
 ## Resumo
 
@@ -55,4 +52,4 @@ A separação principal da V2 é entre definição e submissão.
 
 A facade `Forms` é apenas a porta pública da biblioteca. Ela existe para oferecer uma API simples e estável para os consumidores, mas não significa que toda a regra interna precise ficar em uma única classe. A implementação pode ser organizada em serviços internos de definição, submissão, renderização e arquivos, sem mudar o contrato público.
 
-Os métodos públicos são classificados em três grupos: métodos apenas via facade, métodos disponíveis via facade e model, e métodos apenas via model. Essa classificação está documentada em [Equivalência entre facade e models](api/equivalencia_facade_model.md), [API via facade Forms](api/facade_forms.md), [Métodos diretos nos models](api/metodos_diretos.md) e [Decisões do refactor](refactor/decisoes-refactor.md).
+Os métodos públicos são classificados em três grupos: métodos apenas via facade, métodos disponíveis via facade e model, e métodos apenas via model. Essa classificação está documentada em [Diferenças e equivalências entre API direta e facade](api/api_direta_facade_diferencas_equivalencias.md), [API via facade](api/api_facade.md), [API direta](api/api_direta.md) e [Decisões do refactor](refactor/decisoes-refactor.md).
