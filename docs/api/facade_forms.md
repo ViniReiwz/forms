@@ -1,23 +1,23 @@
 # API via facade Forms
 
-Use `Uspdev\Forms\Facades\Forms` quando quiser consumir a biblioteca por uma porta única, estável e orientada a fluxo.
+A facade `Uspdev\Forms\Facades\Forms` funciona como porta única, estável e orientada a fluxo para consumo da biblioteca.
 
 ```php
 use Uspdev\Forms\Facades\Forms;
 ```
 
-A facade é indicada quando a aplicação quer que o pacote resolva detalhes como versão ativa, definição concreta, validação, persistência e consultas.
+A facade funciona quando o pacote resolve detalhes como versão ativa, definição concreta, validação, persistência e consultas.
 
-Ela também reduz o acoplamento do consumidor com os models internos. O consumidor chama métodos de alto nível e a biblioteca decide quais serviços internos e models precisam participar.
+Ela também reduz o acoplamento do consumidor com os models internos. O consumidor chama métodos de alto nível e a biblioteca decide quais serviços internos e models participam.
 
-## Quando usar
+## Quando a facade aparece
 
-Use a facade quando:
+A facade aparece quando:
 
-* você ainda não tem uma `FormDefinition` ou `FormSubmission` carregada;
-* a operação precisa resolver `name + version` ou versão ativa;
+* ainda não há uma `FormDefinition` ou `FormSubmission` carregada;
+* a operação resolve `name + version` ou versão ativa;
 * a operação representa um fluxo completo, como renderizar, submeter, atualizar, consultar ou sincronizar;
-* você quer uma API uniforme para a maior parte do consumo.
+* a API uniforme cobre a maior parte do consumo.
 
 ## Métodos disponíveis
 
@@ -30,7 +30,7 @@ $definition = Forms::activeDefinition('parecer_final');
 $definitions = Forms::definitions('workflow');
 ```
 
-Esses métodos são facade apenas. Eles existem para localizar definições e resolver versionamento.
+Esses métodos são facade apenas. Eles localizam definições e resolvem versionamento.
 
 ### Renderização
 
@@ -46,7 +46,7 @@ $html = Forms::render('parecer_final', 2, [
 ]);
 ```
 
-Quando a aplicação já tiver uma `FormDefinition`, também pode usar o método direto equivalente documentado em [métodos diretos nos models](metodos_diretos.md).
+Quando a aplicação já tiver uma `FormDefinition`, o método direto equivalente está documentado em [métodos diretos nos models](metodos_diretos.md).
 
 ### Validação sem persistência
 
@@ -56,7 +56,7 @@ $validated = Forms::validate($request, 'parecer_final');
 $validated = Forms::validate($request, 'parecer_final', 2);
 ```
 
-Quando a aplicação já tiver uma `FormDefinition`, também pode validar diretamente pela definição.
+Quando a aplicação já tiver uma `FormDefinition`, a validação também acontece diretamente pela definição.
 
 ### Submissões
 
@@ -68,7 +68,7 @@ $submissions = Forms::submissions('parecer_final', key: 'workflow-123');
 $submissions = Forms::submissions('parecer_final', 2, 'workflow-123');
 ```
 
-`submit` e `update` representam fluxos completos e continuam disponíveis na facade. Quando uma entidade já estiver carregada, a biblioteca também oferece métodos diretos equivalentes para maior expressividade.
+`submit` e `update` representam fluxos completos e continuam disponíveis na facade. Quando uma entidade já está carregada, a biblioteca também oferece métodos diretos equivalentes para maior expressividade.
 
 ### Filtros
 
@@ -90,13 +90,13 @@ Filtros por formulário são facade apenas, porque dependem de resolução de de
 return Forms::downloadFile($submission, 'arquivo');
 ```
 
-Quando a aplicação já tiver uma `FormSubmission`, também pode usar:
+Quando a aplicação já tiver uma `FormSubmission`, o método direto equivalente também está disponível:
 
 ```php
 return $submission->download('arquivo');
 ```
 
-As duas chamadas devem usar a mesma implementação interna, retornar o mesmo tipo e lançar as mesmas exceções.
+As duas chamadas usam a mesma implementação interna, retornam o mesmo tipo e lançam as mesmas exceções.
 
 ### Exclusão
 
@@ -104,7 +104,7 @@ As duas chamadas devem usar a mesma implementação interna, retornar o mesmo ti
 $deleted = Forms::deleteSubmission($submission, auth()->user());
 ```
 
-Quando a aplicação já tiver uma `FormSubmission`, também pode usar o método direto equivalente `$submission->deleteWithActivity($user)`.
+Quando a aplicação já tiver uma `FormSubmission`, o método direto equivalente `$submission->deleteWithActivity($user)` também está disponível.
 
 ### Sincronização
 
@@ -118,6 +118,6 @@ Sincronização é facade apenas. Não há model já resolvido que represente na
 
 A facade oferece facilidade. Métodos diretos nos models oferecem flexibilidade.
 
-Quando as duas formas existirem para o mesmo comportamento, elas devem ser equivalentes e delegar para o mesmo serviço interno. Se não houver justificativa clara para manter as duas formas públicas, apenas uma deve ser exposta.
+Quando as duas formas existem para o mesmo comportamento, elas são equivalentes e delegam para o mesmo serviço interno. Se não houver justificativa clara para manter as duas formas públicas, apenas uma fica exposta.
 
 Consulte o mapa completo em [Equivalência entre facade e models](equivalencia_facade_model.md).

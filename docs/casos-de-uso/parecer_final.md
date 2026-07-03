@@ -4,7 +4,7 @@ Este exemplo mostra um fluxo completo usando `uspdev/forms`: criar a definição
 
 ## Cenário
 
-Uma aplicação precisa coletar um parecer final de análise. O formulário terá:
+Uma aplicação coleta um parecer final de análise. O formulário tem:
 
 * título do parecer;
 * resultado da análise;
@@ -95,7 +95,7 @@ use Uspdev\Forms\Facades\Forms;
 $result = Forms::syncFromDirectory(storage_path('app/formsJson'));
 ```
 
-O sync deve validar a definição, criar ou atualizar o registro por `name + version` e marcar `parecer_final` versão `1` como ativa.
+O sync valida a definição, cria ou atualiza o registro por `name + version` e marca `parecer_final` versão `1` como ativa.
 
 ## 3. Criar rotas da aplicação
 
@@ -144,9 +144,9 @@ class ParecerController
 }
 ```
 
-Como `version` foi omitida, a biblioteca deve usar a versão ativa de `parecer_final`.
+Como `version` foi omitida, a biblioteca usa a versão ativa de `parecer_final`.
 
-Se a aplicação precisar prender esse fluxo à versão `1`, informe a versão explicitamente:
+Quando a aplicação vincula esse fluxo à versão `1`, a renderização ocorre com a versão `1`:
 
 ```php
 $html = Forms::render('parecer_final', 1, [
@@ -187,11 +187,11 @@ public function store(Request $request)
 }
 ```
 
-Se algum campo obrigatório estiver ausente ou uma regra como `min:20` falhar, `Forms::submit()` deve lançar `ValidationException`.
+Se algum campo obrigatório estiver ausente ou uma regra como `min:20` falhar, `Forms::submit()` lança `ValidationException`.
 
 ## 6.1. Validar sem persistir
 
-Se a aplicação quiser usar o formulário sem persistir os dados em `form_submissions`, use `Forms::validate()` em vez de `Forms::submit()`.
+Quando a aplicação usa o formulário sem persistir os dados em `form_submissions`, `Forms::validate()` entra no lugar de `Forms::submit()`.
 
 ```php
 public function preview(Request $request)
@@ -234,7 +234,7 @@ public function edit(FormSubmission $submission)
 }
 ```
 
-Ao receber uma submissão, a biblioteca deve renderizar usando `$submission->formDefinition`. Isso preserva a versão usada no envio original, mesmo que outra versão de `parecer_final` esteja ativa.
+Ao receber uma submissão, a biblioteca renderiza usando `$submission->formDefinition`. Isso preserva a versão usada no envio original, mesmo que outra versão de `parecer_final` esteja ativa.
 
 ## 8. Atualizar a submissão
 
@@ -337,6 +337,6 @@ sequenceDiagram
 * Informar `version` prende a operação a uma versão concreta.
 * `Forms::validate()` valida sem persistir.
 * `Forms::submit()` e `Forms::update()` validam e persistem.
-* Editar ou visualizar uma submissão existente deve usar a definição relacionada à submissão.
+* Editar ou visualizar uma submissão existente usa a definição relacionada à submissão.
 * Igualdade em filtros usa somente o operador `==`.
 * `separator` é apenas visual e não gera dado submetido.

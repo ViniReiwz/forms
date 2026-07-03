@@ -1,10 +1,10 @@
 # Breaking changes
 
-Esta versão altera a API pública e o contrato de definições. Sistemas que não puderem migrar devem permanecer na versão anterior do pacote.
+Esta versão altera a API pública e o contrato de definições. Sistemas que não puderem migrar permanecem na versão anterior do pacote.
 
 ## Classe Form deixa de ser API pública
 
-Consumidores externos devem migrar para `Uspdev\Forms\Facades\Forms`.
+Consumidores externos migram para `Uspdev\Forms\Facades\Forms`.
 
 Antes:
 
@@ -62,7 +62,7 @@ $active = Forms::definition('parecer_final');
 $definition = Forms::definition('parecer_final', 2);
 ```
 
-Arquivos JSON de definição devem informar `version`.
+Arquivos JSON de definição informam `version`.
 
 ```json
 {
@@ -77,4 +77,4 @@ Arquivos JSON de definição devem informar `version`.
 
 ## Erros de submissão
 
-A API pública deve retornar `FormSubmission` em caso de sucesso ou lançar exceções em falha. Fluxos que tratavam retorno string/array de `Form::handleSubmission` devem ser migrados para `try/catch`.
+A API pública retorna `FormSubmission` em caso de sucesso ou lança exceções em falha. Fluxos que tratavam retorno string/array de `Form::handleSubmission` migram para `try/catch`.

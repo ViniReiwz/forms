@@ -91,7 +91,7 @@ try {
 
 ## Passo 4: atualizar edição
 
-Ao editar uma submissão existente, o consumidor deve passar a submissão para que a biblioteca use a `formDefinition` relacionada.
+Ao editar uma submissão existente, o consumidor passa a submissão para que a biblioteca use a `formDefinition` relacionada.
 
 ```php
 $html = Forms::render('parecer_final', ['method' => 'PUT'], $submission);
@@ -113,7 +113,7 @@ $submissionsV1 = Forms::submissions('parecer_final', 1, 'workflow-123');
 
 Sistemas de workflow normalmente associam formulários a transições.
 
-Quando a transição deve ser reprodutível e permanecer presa a uma versão concreta, a definição da transição deve guardar `form` e `form_version`.
+Quando a transição precisa ser reprodutível e permanecer presa a uma versão concreta, a definição da transição guarda `form` e `form_version`.
 
 ```json
 {
@@ -136,7 +136,7 @@ $html = Forms::render(
 );
 ```
 
-Quando a transição sempre deve usar a versão ativa do formulário, `form_version` pode ser omitido.
+Quando a transição usa sempre a versão ativa do formulário, `form_version` pode ser omitido.
 
 ```json
 {
@@ -155,12 +155,12 @@ $html = Forms::render(
 );
 ```
 
-Ao processar a transição, o workflow deve preservar o `form_submission_id` retornado por `Forms::submit` ou `Forms::update`, quando houver formulário associado.
+Ao processar a transição, o workflow preserva o `form_submission_id` retornado por `Forms::submit` ou `Forms::update`, quando houver formulário associado.
 
 ## Cuidados
 
-* Não use a versão ativa para renderizar uma submissão antiga.
+* A versão ativa não é usada para renderizar uma submissão antiga.
 * Ao renderizar uma submissão existente, passe a submissão para a API.
-* Use `form_version` em workflows quando a transição precisar ser estável e reprodutível.
+* `form_version` em workflows mantém a transição estável e reprodutível.
 * Omitir `version` significa usar a versão ativa do formulário.
-* Defina apenas uma versão ativa por `name`.
+* Há apenas uma versão ativa por `name`.

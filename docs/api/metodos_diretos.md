@@ -4,7 +4,7 @@ Métodos diretos são atalhos públicos em models como `FormDefinition` e `FormS
 
 Eles são indicados quando a aplicação já tem a entidade carregada e quer executar uma ação que pertence naturalmente a essa entidade.
 
-## Por que usar
+## Contexto
 
 Métodos diretos dão mais flexibilidade e deixam o código mais expressivo quando o objeto já está em mãos.
 
@@ -18,7 +18,7 @@ Nesse caso, a aplicação já tem uma `FormSubmission`. O arquivo pertence àque
 
 ## Regra para expor métodos diretos
 
-Um método direto só deve ser público quando houver uma justificativa clara:
+Um método direto só é público quando há uma justificativa clara:
 
 * a operação pertence naturalmente à entidade;
 * a aplicação consumidora pode já ter a entidade carregada;
@@ -26,7 +26,7 @@ Um método direto só deve ser público quando houver uma justificativa clara:
 * a versão via facade continua útil para fluxos de alto nível;
 * as duas formas podem compartilhar a mesma implementação interna.
 
-Se não houver ganho real em oferecer as duas formas, o método não deve ser duplicado publicamente.
+Se não houver ganho real em oferecer as duas formas, o método não é duplicado publicamente.
 
 ## FormDefinition
 
@@ -92,13 +92,13 @@ $deleted = Forms::deleteSubmission($submission, auth()->user());
 
 ## Equivalência obrigatória
 
-Quando um comportamento estiver disponível pela facade e pelo model, as duas formas devem:
+Quando um comportamento está disponível pela facade e pelo model, as duas formas:
 
-* delegar para o mesmo serviço interno;
-* retornar o mesmo tipo;
-* lançar as mesmas exceções;
-* respeitar as mesmas regras de validação, autorização e auditoria;
-* ter testes de equivalência.
+* delegam para o mesmo serviço interno;
+* retornam o mesmo tipo;
+* lançam as mesmas exceções;
+* respeitam as mesmas regras de validação, autorização e auditoria;
+* têm testes de equivalência.
 
 Exemplo de implementação esperada:
 
@@ -107,14 +107,14 @@ Forms::downloadFile($submission, $field);
 $submission->download($field);
 ```
 
-Ambas as chamadas devem chegar ao mesmo serviço interno de arquivos de submissão.
+Ambas as chamadas chegam ao mesmo serviço interno de arquivos de submissão.
 
-## Quando preferir a facade
+## Contexto da facade
 
-Prefira a facade quando a operação precisa resolver definição, versão ativa, submissão ou executar um fluxo completo.
+A facade entra quando a operação resolve definição, versão ativa, submissão ou executa um fluxo completo.
 
-## Quando preferir o model
+## Contexto do model
 
-Prefira o método direto quando a entidade já está carregada e a ação pertence claramente a ela.
+O método direto entra quando a entidade já está carregada e a ação pertence claramente a ela.
 
-Consulte o mapa completo de métodos equivalentes, métodos apenas via facade e métodos apenas via model em [Equivalência entre facade e models](equivalencia_facade_model.md).
+O mapa completo de métodos equivalentes, métodos apenas via facade e métodos apenas via model está em [Equivalência entre facade e models](equivalencia_facade_model.md).

@@ -15,7 +15,7 @@
 | ---- | ----- |
 | name | obrigatório, string, máximo 255 |
 | version | obrigatório, inteiro positivo |
-| name + version | deve ser único |
+| name + version | é único |
 | status | obrigatório; `draft`, `active` ou `disabled`; default `active` quando omitido no sync |
 | active por name | apenas uma versão ativa por `name` |
 | group | obrigatório, string, máximo 255 |
@@ -49,4 +49,4 @@ Casos rejeitados incluem:
 
 ## Ativação de versão
 
-Quando uma definição for salva com `status = active`, a biblioteca deve marcar as demais definições com o mesmo `name` como `disabled`. Esse comportamento preserva a regra de uma única versão ativa por formulário lógico mesmo em bancos sem suporte simples a índice parcial.
+Quando uma definição é salva com `status = active`, a biblioteca marca as demais definições com o mesmo `name` como `disabled`. Esse comportamento preserva a regra de uma única versão ativa por formulário lógico mesmo em bancos sem suporte simples a índice parcial.

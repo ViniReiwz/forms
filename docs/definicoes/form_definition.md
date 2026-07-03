@@ -19,11 +19,11 @@ Uma `form_definition` descreve um formulário e sua estrutura de campos. Cada re
 ## Regras de versionamento
 
 * `name` não é único isoladamente.
-* `name + version` deve ser único.
-* Deve existir no máximo uma versão ativa para cada `name`.
-* Quando uma versão for marcada como ativa, as demais versões do mesmo `name` devem ser desativadas pelo service/model.
+* `name + version` é único.
+* Existe no máximo uma versão ativa para cada `name`.
+* Quando uma versão é marcada como ativa, as demais versões do mesmo `name` são desativadas pelo service/model.
 * Sistemas externos podem referenciar uma versão explícita com `name + version`.
-* Quando `version` for omitida em chamadas públicas, a biblioteca deve usar a versão ativa do `name`.
+* Quando `version` é omitida em chamadas públicas, a biblioteca usa a versão ativa do `name`.
 
 ## Estrutura JSON
 
@@ -89,7 +89,7 @@ Uma `form_definition` descreve um formulário e sua estrutura de campos. Cada re
 
 ## O que é `separator`
 
-`separator` é um tipo de campo visual usado para separar seções do formulário. Ele não coleta dados, não gera entrada submetida e por isso não precisa de `name`.
+`separator` é um tipo de campo visual usado para separar seções do formulário. Ele não coleta dados, não gera entrada submetida e por isso dispensa `name`.
 
 Exemplo:
 

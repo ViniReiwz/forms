@@ -17,17 +17,17 @@ Contém as submissões de formulários.
 
 ## Regras
 
-* `FormSubmission` não precisa de coluna `version`.
+* `FormSubmission` dispensa coluna `version`.
 * A versão usada por uma submissão é determinada por `form_definition_id`.
 * Ao criar submissão, a API resolve a definição por `name + version` ou pela versão ativa quando `version` for omitida.
-* Ao renderizar ou visualizar uma submissão existente, a biblioteca deve usar `$submission->formDefinition`, nunca a versão ativa por `name`.
+* Ao renderizar ou visualizar uma submissão existente, a biblioteca usa `$submission->formDefinition`, nunca a versão ativa por `name`.
 * Submissões antigas continuam renderizando com a definição exata usada no momento do envio.
 
 ## Auditoria
 
 A auditoria operacional de submissões continua usando `spatie/laravel-activitylog`.
 
-Não existe `form_submission_history` nesta versão. O histórico próprio só deve ser reavaliado se houver necessidade de diff estruturado, rollback, snapshots completos por edição ou auditoria independente do Spatie.
+Não existe `form_submission_history` nesta versão. O histórico próprio só é reavaliado se houver necessidade de diff estruturado, rollback, snapshots completos por edição ou auditoria independente do Spatie.
 
 ## Relacionamento
 

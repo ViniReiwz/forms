@@ -6,7 +6,7 @@ Este documento registra decisões arquiteturais tomadas durante o refactor. Ele 
 
 A facade `Uspdev\Forms\Facades\Forms` é a porta pública oficial da biblioteca. Ela encapsula `FormsService` e evita que consumidores externos dependam da classe interna `Form`.
 
-A facade não deve ser entendida como a classe que concentra toda a implementação. Ela é a entrada estável para quem usa o pacote. Internamente, as responsabilidades podem ser separadas em serviços próprios para definição, submissão, renderização e arquivos.
+A facade não concentra toda a implementação. Ela é a entrada estável para quem usa o pacote. Internamente, as responsabilidades ficam separadas em serviços próprios para definição, submissão, renderização e arquivos.
 
 ## Divisão entre definição e submissão
 
@@ -22,7 +22,7 @@ A facade oferece facilidade. Ela é indicada para fluxos de alto nível, resolu�
 
 Métodos diretos nos models oferecem flexibilidade. Eles são indicados quando a aplicação já tem uma entidade carregada e a operação pertence naturalmente a essa entidade.
 
-Os métodos públicos devem ser classificados em três grupos.
+Os métodos públicos ficam classificados em três grupos.
 
 ### Facade apenas
 
@@ -67,11 +67,11 @@ Forms::deleteSubmission($submission, auth()->user());
 $submission->deleteWithActivity(auth()->user());
 ```
 
-Quando duas formas públicas existirem para o mesmo comportamento, elas devem usar a mesma implementação interna, retornar o mesmo tipo, lançar as mesmas exceções e ter testes de equivalência.
+Quando duas formas públicas existem para o mesmo comportamento, elas usam a mesma implementação interna, retornam o mesmo tipo, lançam as mesmas exceções e têm testes de equivalência.
 
 ### Model apenas
 
-Métodos model apenas são aqueles que representam comportamento próprio de uma entidade já carregada e não precisam de uma entrada global pela facade.
+Métodos model apenas são aqueles que representam comportamento próprio de uma entidade já carregada e dispensam uma entrada global pela facade.
 
 Exemplos:
 
@@ -81,11 +81,11 @@ $submission->formDefinition;
 $definition->formSubmissions();
 ```
 
-Se não houver justificativa plausível para disponibilizar um comportamento nas duas formas, ele não deve ser duplicado publicamente.
+Se não houver justificativa plausível para disponibilizar um comportamento nas duas formas, ele não é duplicado publicamente.
 
 ## Form como implementação interna
 
-`Uspdev\Forms\Form` permanece no pacote para concentrar ou reaproveitar regras existentes de renderização, validação de submissão, upload e download. Ela não deve ser apresentada como API recomendada na documentação pública.
+`Uspdev\Forms\Form` permanece no pacote para concentrar ou reaproveitar regras existentes de renderização, validação de submissão, upload e download. Ela não aparece como API recomendada na documentação pública.
 
 ## Versionamento aprovado
 
@@ -99,15 +99,15 @@ Motivos:
 
 ## Uso da versão ativa quando version é omitida
 
-Chamadas públicas que recebem `name` e `version` podem omitir `version`. Nesse caso, a biblioteca deve usar a versão ativa do formulário.
+Chamadas públicas que recebem `name` e `version` podem omitir `version`. Nesse caso, a biblioteca usa a versão ativa do formulário.
 
-Essa regra melhora a ergonomia para casos comuns, mas consumidores que precisam de reprodutibilidade devem informar a versão explicitamente.
+Essa regra melhora a ergonomia para casos comuns, mas consumidores que exigem reprodutibilidade informam a versão explicitamente.
 
 ## Uso sem persistência aprovado
 
-A V2 deve permitir o uso do `forms` sem persistir os dados submetidos.
+A V2 permite o uso do `forms` sem persistir os dados submetidos.
 
-Esse modo atende aplicações que querem usar a biblioteca como componente de renderização e validação, mas precisam processar os dados fora de `form_submissions`.
+Esse modo atende aplicações que usam a biblioteca como componente de renderização e validação, mas processam os dados fora de `form_submissions`.
 
 Regra definida:
 
@@ -135,4 +135,4 @@ Justificativa:
 
 * `FormSubmission` já representa o dado submetido;
 * a auditoria operacional existente continua usando `spatie/laravel-activitylog`;
-* histórico próprio só deve ser reavaliado se houver necessidade de diff estruturado, rollback, snapshots completos por edição ou auditoria independente do Spatie.
+* histórico próprio só é reavaliado se houver necessidade de diff estruturado, rollback, snapshots completos por edição ou auditoria independente do Spatie.
