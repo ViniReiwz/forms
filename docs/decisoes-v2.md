@@ -1,6 +1,6 @@
-# Decisões do refactor
+# Decisões da V2
 
-Este documento registra decisões arquiteturais tomadas durante o refactor. Ele também documenta alternativas descartadas para evitar que voltem como ambiguidades durante a implementação.
+Este documento registra decisões arquiteturais tomadas durante a evolução para a versão 2 da biblioteca. Ele também documenta alternativas descartadas para evitar que voltem como ambiguidades durante a implementação.
 
 ## Forms como API oficial
 
@@ -22,66 +22,9 @@ A facade oferece facilidade. Ela é indicada para fluxos de alto nível, resolu�
 
 Métodos diretos nos models oferecem flexibilidade. Eles são indicados quando a aplicação já tem uma entidade carregada e a operação pertence naturalmente a essa entidade.
 
-Os métodos públicos ficam classificados em três grupos.
+A classificação entre fluxos apenas via facade, fluxos disponíveis via facade e model, e fluxos apenas via model está documentada em [API via facade e API direta: diferenças e equivalências](api/api_direta_facade_diferencas_equivalencias.md). Os detalhes de cada entrada pública ficam em [API via facade](api/api_facade.md) e [API direta](api/api_direta.md).
 
-### Facade apenas
-
-Métodos facade apenas são aqueles em que não há entidade já resolvida que represente naturalmente a operação, ou em que a operação existe para localizar/orquestrar outros objetos.
-
-Exemplos:
-
-```php
-Forms::definition('parecer_final');
-Forms::definition('parecer_final', 2);
-Forms::activeDefinition('parecer_final');
-Forms::definitions('workflow');
-Forms::submission($id);
-Forms::submissions('parecer_final', key: 'workflow-123');
-Forms::filterSubmissions(...);
-Forms::syncFromDirectory($path);
-```
-
-### Facade e model
-
-Métodos podem existir nas duas formas quando ambas forem úteis para consumidores diferentes.
-
-Exemplos:
-
-```php
-Forms::render('parecer_final', 2, $options);
-$definition->render($options);
-
-Forms::validate($request, 'parecer_final', 2);
-$definition->validateData($request);
-
-Forms::submit($request);
-$definition->submit($request);
-
-Forms::update($request, $submission);
-$submission->updateFromRequest($request);
-
-Forms::downloadFile($submission, 'arquivo');
-$submission->download('arquivo');
-
-Forms::deleteSubmission($submission, auth()->user());
-$submission->deleteWithActivity(auth()->user());
-```
-
-Quando duas formas públicas existem para o mesmo comportamento, elas usam a mesma implementação interna, retornam o mesmo tipo, lançam as mesmas exceções e têm testes de equivalência.
-
-### Model apenas
-
-Métodos model apenas são aqueles que representam comportamento próprio de uma entidade já carregada e dispensam uma entrada global pela facade.
-
-Exemplos:
-
-```php
-$submission->showHtml();
-$submission->formDefinition;
-$definition->formSubmissions();
-```
-
-Se não houver justificativa plausível para disponibilizar um comportamento nas duas formas, ele não é duplicado publicamente.
+Quando duas formas públicas existem para o mesmo comportamento, elas devem usar a mesma implementação interna, retornar o mesmo tipo, lançar as mesmas exceções e ter testes de equivalência.
 
 ## Form como implementação interna
 
@@ -118,7 +61,7 @@ Regra definida:
 
 ## DTOs barrados
 
-DTOs não foram introduzidos neste refactor.
+DTOs não foram introduzidos na V2.
 
 Justificativa:
 

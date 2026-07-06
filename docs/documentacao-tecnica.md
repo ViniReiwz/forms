@@ -4,7 +4,7 @@ Esta é a porta de entrada da documentação técnica do `uspdev/forms`. Os link
 
 ## Leitura recomendada
 
-1. [Conceitos e definição de formulário](definicoes/form_definition.md)  
+1. [Conceitos e definição de formulário](models/form-definition.md)  
    Descreve como `form_definitions` funciona, como `name + version` identifica uma versão concreta e como a versão ativa é escolhida.
 
 2. [API via facade](api/api_facade.md)  
@@ -16,23 +16,20 @@ Esta é a porta de entrada da documentação técnica do `uspdev/forms`. Os link
 4. [Diferenças e equivalências entre API direta e facade](api/api_direta_facade_diferencas_equivalencias.md)  
    Mostra os métodos equivalentes, os fluxos apenas via facade, os fluxos apenas via direta e os critérios de escolha entre as abordagens.
 
-5. [Caso de uso completo: parecer final](casos-de-uso/parecer_final.md)  
+5. [Caso de uso completo: parecer final](caso-de-uso-parecer-final.md)  
    Mostra um exemplo de ponta a ponta: definição JSON, sync, renderização, submissão, validação, edição e consulta.
 
-6. [Submissões, auditoria e relacionamento com definições](submissoes/modelagem.md)  
+6. [Submissões, auditoria e relacionamento com definições](models/form-submission.md)  
    Mostra como `form_submissions` se relaciona com `form_definitions` e por que submissões antigas continuam presas à definição usada no envio.
 
-7. [Validação de form_definition](definicoes/validacao_form_definition.md)  
+7. [Validação de form_definition](models/validacao-form-definition.md)  
    Resume as regras aplicadas pelo `FormDefinitionSchemaValidator`.
 
-8. [Guia de migração para consumidores](consumidores/migracao_consumidores.md)  
-   Descreve a migração de sistemas que usam `uspdev/forms`, incluindo bibliotecas consumidoras como `uspdev/workflow`.
+8. [Guia de migração para consumidores](migracao.md)  
+   Descreve a migração de sistemas que usam `uspdev/forms`, incluindo bibliotecas consumidoras como `uspdev/workflow`, e destaca as mudanças incompatíveis.
 
-9. [Breaking changes](refactor/breaking_changes.md)  
-   Resume as mudanças incompatíveis da nova versão.
-
-10. [Decisões do refactor](refactor/decisoes-refactor.md)  
-   Reúne as decisões aprovadas e as alternativas descartadas durante o refactor.
+9. [Decisões da V2](decisoes-v2.md)  
+   Reúne as decisões aprovadas e as alternativas descartadas durante a evolução para a versão 2.
 
 ## Resumo
 
@@ -52,4 +49,4 @@ A separação principal da V2 é entre definição e submissão.
 
 A facade `Forms` é apenas a porta pública da biblioteca. Ela existe para oferecer uma API simples e estável para os consumidores, mas não significa que toda a regra interna precise ficar em uma única classe. A implementação pode ser organizada em serviços internos de definição, submissão, renderização e arquivos, sem mudar o contrato público.
 
-Os métodos públicos são classificados em três grupos: métodos apenas via facade, métodos disponíveis via facade e model, e métodos apenas via model. Essa classificação está documentada em [Diferenças e equivalências entre API direta e facade](api/api_direta_facade_diferencas_equivalencias.md), [API via facade](api/api_facade.md), [API direta](api/api_direta.md) e [Decisões do refactor](refactor/decisoes-refactor.md).
+Os métodos públicos são classificados em três grupos: métodos apenas via facade, métodos disponíveis via facade e model, e métodos apenas via model. Essa classificação está documentada em [Diferenças e equivalências entre API direta e facade](api/api_direta_facade_diferencas_equivalencias.md), [API via facade](api/api_facade.md) e [API direta](api/api_direta.md).

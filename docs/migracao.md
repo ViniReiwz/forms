@@ -6,7 +6,21 @@ Este guia é voltado para sistemas que usam `uspdev/forms`, incluindo biblioteca
 
 Migrar do uso direto de `Uspdev\Forms\Form` para a facade `Uspdev\Forms\Facades\Forms` e passar a referenciar definições por `name + version` quando uma versão concreta for necessária.
 
+Sistemas que não puderem migrar para este contrato devem permanecer na versão anterior do pacote.
+
+## Breaking Changes
+
+**[BREAKING CHANGE]** `Uspdev\Forms\Form` deixa de ser a API pública para consumidores externos. A integração deve passar pela facade `Uspdev\Forms\Facades\Forms`.
+
+**[BREAKING CHANGE]** `name` não identifica mais sozinho uma definição única. Agora `name` identifica o formulário lógico e `version` identifica uma versão concreta.
+
+**[BREAKING CHANGE]** Arquivos JSON de definição devem informar `version`. O campo `status` define se uma versão está ativa, em rascunho ou desabilitada.
+
+**[BREAKING CHANGE]** Falhas de submissão deixam de ser tratadas como retorno `string` ou `array` de `Form::handleSubmission()`. A API pública retorna `FormSubmission` em caso de sucesso ou lança exceções em falha.
+
 ## Passo 1: atualizar definições JSON
+
+**[BREAKING CHANGE]**
 
 Inclua `version` em todos os arquivos de definição.
 
@@ -34,7 +48,13 @@ Depois:
 }
 ```
 
+Antes, `name` era único. Depois, `name` identifica o formulário lógico e `version` identifica uma versão concreta. Quando uma chamada pública omitir `version`, a biblioteca usa a versão ativa daquele `name`.
+
 ## Passo 2: substituir new Form por Forms
+
+**[BREAKING CHANGE]**
+
+Consumidores externos migram de `Uspdev\Forms\Form` para `Uspdev\Forms\Facades\Forms`.
 
 Antes:
 
@@ -65,6 +85,10 @@ $html = Forms::render('parecer_final', 1, [
 ```
 
 ## Passo 3: atualizar submissões
+
+**[BREAKING CHANGE]**
+
+Fluxos que tratavam retorno `string` ou `array` de `Form::handleSubmission()` migram para `try/catch`.
 
 Antes:
 

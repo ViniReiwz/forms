@@ -73,4 +73,4 @@ public function store(Request $request)
 
 ## Documentação
 
-Comece por [Documentação técnica](docs/documentacao_tecnica.md). Ela organiza os demais documentos na ordem recomendada de leitura.
+Comece por [Documentação técnica](docs/documentacao-tecnica.md). Ela organiza os demais documentos na ordem recomendada de leitura.
