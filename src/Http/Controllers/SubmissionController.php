@@ -4,11 +4,10 @@ namespace Uspdev\Forms\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Gate;
-use Uspdev\Forms\Form;
 use Uspdev\Forms\Facades\Forms;
 use Uspdev\Forms\Models\FormDefinition;
 use Uspdev\Forms\Models\FormSubmission;
+use Uspdev\Forms\Services\FormRendererService;
 
 class SubmissionController extends Controller
 {
@@ -22,15 +21,7 @@ class SubmissionController extends Controller
     {
         \UspTheme::activeUrl(route('form-definitions.index'));
 
-        $config = [
-            'editable' => true,
-            'name' => $formDefinition->name,
-            'version' => $formDefinition->version,
-            'action' => route('form-submissions.store', $formDefinition->id),
-        ];
-        $form = new Form($config);
-        $form->user = Auth::user();
-        $form->admin = Gate::allows('manager', $form->user) ? true : false;
+        $form = app(FormRendererService::class)->listingForm($formDefinition, Auth::user());
 
         return view('uspdev-forms::submission.index', compact('form', 'formDefinition'));
     }

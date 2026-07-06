@@ -2,7 +2,9 @@
 
 namespace Uspdev\Forms\Services;
 
+use App\Models\User;
 use InvalidArgumentException;
+use Illuminate\Support\Facades\Gate;
 use Uspdev\Forms\Form;
 use Uspdev\Forms\Models\FormDefinition;
 use Uspdev\Forms\Models\FormSubmission;
@@ -23,5 +25,20 @@ class FormRendererService
         }
 
         return $html;
+    }
+
+    public function listingForm(FormDefinition $definition, ?User $user = null): Form
+    {
+        $form = new Form([
+            'editable' => true,
+            'name' => $definition->name,
+            'version' => $definition->version,
+            'action' => route('form-submissions.store', $definition->id),
+        ]);
+
+        $form->user = $user;
+        $form->admin = Gate::allows('manager', $user);
+
+        return $form;
     }
 }
