@@ -18,9 +18,20 @@ name: parecer_final
 version: 1
 ```
 
+## Perspectivas do fluxo
+
+Este caso de uso mistura duas responsabilidades diferentes:
+
+* **Desenvolvedor consumidor da biblioteca**: prepara arquivos, rotas, controllers e views da aplicação que usa `uspdev/forms`.
+* **Usuário configurador do formulário**: define campos, rótulos, obrigatoriedade e regras em uma interface interativa. Essa interface ainda não está implementada, mas o resultado esperado dela é uma definição equivalente ao JSON mostrado abaixo.
+
+As etapas com `storage/app/formsJson`, `php artisan forms:sync`, rotas e controller descrevem o fluxo do desenvolvedor. No fluxo com interface interativa, o usuário não precisa acessar o código nem executar comandos Artisan: a aplicação coleta as escolhas feitas na tela, monta a definição, valida a estrutura e persiste em `form_definitions`.
+
 ## 1. Criar a definição JSON
 
-Crie um arquivo em `storage/app/formsJson/parecer_final.v1.json`.
+No fluxo do desenvolvedor, crie um arquivo em `storage/app/formsJson/parecer_final.v1.json`.
+
+No fluxo futuro com interface interativa, este JSON não precisa ser escrito manualmente. A interface deve gerar uma definição com a mesma estrutura a partir das escolhas do usuário configurador.
 
 ```json
 {
@@ -81,7 +92,7 @@ Crie um arquivo em `storage/app/formsJson/parecer_final.v1.json`.
 
 ## 2. Sincronizar a definição
 
-Sincronize os arquivos JSON com o banco.
+No fluxo do desenvolvedor, sincronize os arquivos JSON com o banco.
 
 ```bash
 php artisan forms:sync --path=storage/app/formsJson
@@ -97,7 +108,11 @@ $result = Forms::syncFromDirectory(storage_path('app/formsJson'));
 
 O sync valida a definição, cria ou atualiza o registro por `name + version` e marca `parecer_final` versão `1` como ativa.
 
+No fluxo com interface interativa, a sincronização por arquivo não é necessária. A própria aplicação deve enviar a definição gerada para o backend, validar com as mesmas regras de `FormDefinitionSchemaValidator` e criar ou atualizar o registro em `form_definitions`.
+
 ## 3. Criar rotas da aplicação
+
+Esta etapa é responsabilidade do desenvolvedor consumidor da biblioteca. As rotas abaixo expõem, na aplicação, as telas e endpoints que vão renderizar o formulário, receber submissões, editar respostas e baixar arquivos.
 
 ```php
 use App\Http\Controllers\ParecerController;
@@ -133,23 +148,25 @@ class ParecerController
 {
     public function create()
     {
-        $html = Forms::render('parecer_final', [
+        $parecerFormHtml = Forms::render('parecer_final', [
             'action' => route('parecer.store'),
             'method' => 'POST',
             'key' => 'processo-123',
         ]);
 
-        return view('parecer.form', compact('html'));
+        return view('parecer.form', compact('parecerFormHtml'));
     }
 }
 ```
+
+`Forms::render()` retorna uma string HTML com o formulário renderizado. O nome da variável que recebe esse retorno é responsabilidade da aplicação consumidora. Use nomes semânticos, como `$parecerFormHtml`, especialmente quando a mesma tela puder exibir mais de um formulário.
 
 Como `version` foi omitida, a biblioteca usa a versão ativa de `parecer_final`.
 
 Quando a aplicação vincula esse fluxo à versão `1`, a renderização ocorre com a versão `1`:
 
 ```php
-$html = Forms::render('parecer_final', 1, [
+$parecerFormHtml = Forms::render('parecer_final', 1, [
     'action' => route('parecer.store'),
     'method' => 'POST',
     'key' => 'processo-123',
@@ -164,9 +181,11 @@ $html = Forms::render('parecer_final', 1, [
 @extends('layouts.app')
 
 @section('content')
-    {!! $html !!}
+    {!! $parecerFormHtml !!}
 @endsection
 ```
+
+A view apenas imprime o HTML recebido do controller. Como `{!! ... !!}` não escapa o conteúdo, use essa saída somente para HTML gerado pela biblioteca ou por código controlado pela aplicação.
 
 ## 6. Submeter e validar
 
@@ -227,12 +246,12 @@ Esta ação exibe a tela de edição. Ela responde ao `GET /parecer/{submission}
 ```php
 public function edit(FormSubmission $submission)
 {
-    $html = Forms::render('parecer_final', [
+    $parecerFormHtml = Forms::render('parecer_final', [
         'action' => route('parecer.update', $submission),
         'method' => 'PUT',
     ], $submission);
 
-    return view('parecer.form', compact('html', 'submission'));
+    return view('parecer.form', compact('parecerFormHtml', 'submission'));
 }
 ```
 
@@ -263,32 +282,14 @@ public function update(Request $request, FormSubmission $submission)
 
 ## 9. Consultar submissões
 
-Buscar todas as submissões da versão ativa:
-
 ```php
+// Buscar todas as submissões da versão ativa:
 $submissions = Forms::submissions('parecer_final');
-```
 
-Buscar submissões da versão `1`:
-
-```php
+// Buscar submissões da versão `1`:
 $submissions = Forms::submissions('parecer_final', 1);
-```
 
-Filtrar pareceres aprovados:
-
-```php
-$aprovados = Forms::filterSubmissions(
-    'parecer_final',
-    field: 'resultado',
-    operator: '==',
-    value: 'aprovado'
-);
-```
-
-Filtrar pareceres aprovados da versão `1`:
-
-```php
+// Filtrar pareceres aprovados da versão `1`:
 $aprovados = Forms::filterSubmissions(
     'parecer_final',
     1,
@@ -313,7 +314,9 @@ Exemplo de URL:
 /parecer/15/download/anexo
 ```
 
-## Fluxo completo
+## Fluxos ilustrados
+
+### Fluxo do desenvolvedor consumidor
 
 ```mermaid
 sequenceDiagram
@@ -337,10 +340,56 @@ sequenceDiagram
     Forms-->>App: HTML preenchido
 ```
 
+### Fluxo do usuário configurador
+
+Este fluxo representa a interface interativa futura. Ele não substitui as rotas da aplicação consumidora; ele substitui a criação manual do arquivo JSON e o comando `forms:sync`.
+
+```mermaid
+sequenceDiagram
+    participant User as Usuário configurador
+    participant UI as Interface interativa
+    participant App as Aplicação
+    participant Validator as FormDefinitionSchemaValidator
+    participant DB as Banco
+
+    User->>UI: escolhe campos, tipos e regras
+    UI->>App: envia definição estruturada
+    App->>Validator: valida name, version, status e fields
+    Validator-->>App: definição válida
+    App->>DB: cria ou atualiza form_definition
+    DB-->>App: definição persistida
+    App-->>UI: formulário disponível para uso
+```
+
+### Fluxo do usuário que preenche o formulário
+
+Depois que a definição existe no banco, seja por arquivo sincronizado ou por interface interativa, o uso do formulário é o mesmo.
+
+```mermaid
+sequenceDiagram
+    participant User as Usuário respondente
+    participant App as Aplicação
+    participant Forms as Forms facade
+    participant DB as Banco
+
+    User->>App: acessa tela de parecer final
+    App->>Forms: render('parecer_final')
+    Forms->>DB: busca form_definition ativa
+    Forms-->>App: HTML do formulário
+    App-->>User: exibe formulário
+    User->>App: envia dados preenchidos
+    App->>Forms: submit(request)
+    Forms->>Forms: valida dados
+    Forms->>DB: cria form_submission
+    App-->>User: confirma submissão
+```
+
 ## Pontos importantes
 
 * Omitir `version` usa a versão ativa.
 * Informar `version` prende a operação a uma versão concreta.
+* Arquivos JSON e `forms:sync` são um fluxo de desenvolvedor.
+* Uma interface interativa futura deve gerar e persistir uma `FormDefinition` equivalente ao JSON manual.
 * `Forms::validate()` valida sem persistir.
 * `Forms::submit()` e `Forms::update()` validam e persistem.
 * Editar ou visualizar uma submissão existente usa a definição relacionada à submissão.
