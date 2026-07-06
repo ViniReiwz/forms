@@ -9,6 +9,8 @@ use Uspdev\Forms\Facades\Forms;
 use Uspdev\Forms\Enums\FormDefinitionStatus;
 use Uspdev\Forms\Models\FormDefinition;
 use Uspdev\Forms\Models\FormSubmission;
+use Uspdev\Forms\Services\FormDefinitionBackupService;
+use Uspdev\Forms\Services\FormDefinitionService;
 use Uspdev\Forms\Services\FormDefinitionSyncService;
 use Uspdev\Forms\Tests\TestCase;
 
@@ -220,6 +222,58 @@ class FormsV2Test extends TestCase
         $this->assertInstanceOf(FormSubmission::class, $deletedByModel);
         $this->assertSoftDeleted('form_submissions', ['id' => $facadeSubmission->id]);
         $this->assertSoftDeleted('form_submissions', ['id' => $modelSubmission->id]);
+    }
+
+    public function test_definition_service_creates_updates_and_purges_trashed_submissions(): void
+    {
+        $service = app(FormDefinitionService::class);
+        $definition = $service->createFromRequest(Request::create('/', 'POST', [
+            'name' => 'service_form',
+            'version' => 1,
+            'status' => FormDefinitionStatus::Draft->value,
+            'group' => 'workflow',
+            'description' => 'Rascunho',
+            'fields' => json_encode([
+                ['name' => 'resultado', 'type' => 'text', 'label' => 'Resultado'],
+            ]),
+        ]));
+        $submission = FormSubmission::create([
+            'form_definition_id' => $definition->id,
+            'key' => 'workflow-123',
+            'data' => ['resultado' => 'rascunho'],
+        ]);
+
+        $updated = $service->updateFromRequest(Request::create('/', 'POST', [
+            'name' => 'service_form',
+            'version' => 1,
+            'status' => FormDefinitionStatus::Active->value,
+            'group' => 'workflow',
+            'description' => 'Ativo',
+            'fields' => json_encode([
+                ['name' => 'resultado', 'type' => 'text', 'label' => 'Resultado'],
+            ]),
+        ]), $definition);
+        $submission->delete();
+
+        $this->assertSame(FormDefinitionStatus::Active, $updated->fresh()->status);
+        $this->assertSame(1, $service->purgeTrashedSubmissions($definition));
+        $this->assertSame(0, FormSubmission::withTrashed()->where('id', $submission->id)->count());
+    }
+
+    public function test_definition_backup_service_generates_lists_and_removes_backups(): void
+    {
+        $directory = sys_get_temp_dir() . '/uspdev_forms_backups_' . uniqid();
+        config(['uspdev-forms.forms_storage_dir' => $directory]);
+        $definition = $this->definition();
+        $service = app(FormDefinitionBackupService::class);
+
+        $path = $service->backup($definition);
+        $backups = $service->list($definition);
+
+        $this->assertFileExists($path);
+        $this->assertCount(1, $backups);
+        $this->assertSame(1, $service->removeForDefinition($definition));
+        $this->assertSame([], $service->list($definition));
     }
 
     protected function definition(int $version = 1, bool $active = true, ?array $fields = null): FormDefinition
