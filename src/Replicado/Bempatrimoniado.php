@@ -2,9 +2,7 @@
 
 namespace Uspdev\Forms\Replicado;
 
-use Uspdev\Replicado\DB;
 use Uspdev\Replicado\Bempatrimoniado as BempatrimoniadoReplicado;
-use Illuminate\Http\Request;
 
 class Bempatrimoniado extends BempatrimoniadoReplicado
 {

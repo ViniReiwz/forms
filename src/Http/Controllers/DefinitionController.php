@@ -2,7 +2,6 @@
 
 namespace Uspdev\Forms\Http\Controllers;
 
-use Error;
 use Exception;
 use Illuminate\Http\Request;
 use Uspdev\Forms\Models\FormDefinition;

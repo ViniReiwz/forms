@@ -2,14 +2,9 @@
 
 namespace Uspdev\Forms;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 use Uspdev\Forms\Models\FormDefinition;
 use Uspdev\Forms\Models\FormSubmission;
-use Illuminate\Support\Facades\Auth;
 use Spatie\Activitylog\Models\Activity;
-use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Storage;
 use Uspdev\Forms\Enums\FormDefinitionStatus;
 
 class Form
@@ -58,132 +53,6 @@ class Form
 
         $this->action = isset($config['action']) ? $config['action'] : null;
         $this->editable = isset($config['editable']) ? $config['editable'] : false;
-    }
-
-    /**
-     * Processa submissões do form persistindo em banco de dados
-     *
-     * Faz a validação dos campos do form
-     * Dentro do request precisa ter: form_definition, form_key
-     * user é opcional para o caso do form ser aberto
-     * Se possui $request->id atualiza se não cria nova submission
-     *
-     * @param $request->form_definition
-     * @param $request->form_key
-     * @param $request->user
-     * @param $request->id (necessário se update for permitido)
-     * @return FormSubmission $formSubmission
-     */
-    public function handleSubmission(Request $request)
-    {
-        if (!$this->editable) {
-            return 'Form não editável. Passe editable=true';
-        }
-
-        // Retrieve the form definition by id
-        if (!($definition = $this->getDefinitionFromRequest($request))) {
-            return 'Erro ao buscar formDefinition';
-        }
-
-        // Lets store only valid form fields
-        $validated = $this->validate($request);
-
-        if ($validated['status'] === 'error') {
-            return $validated;
-        }
-
-        $data = $validated['data'];
-
-        if ($request->id) {
-            // atualiza registro existente
-            $form = FormSubmission::where('id', $request->id)->firstOrFail();
-        } else {
-            // cria novo registro
-            $form = FormSubmission::Create([
-                'form_definition_id' => $definition->id,
-                'user_id' => $request->user() ? $request->user()->id : null,
-                'key' => $request->form_key,
-                'data' => [],
-            ]);
-        }
-
-        $data = array_merge($form->data, $data);
-
-        // remove arquivo existente
-        if ($request->has('remover')) {
-            foreach ($request->remover as $fieldName) {
-                if (isset($form->data[$fieldName])) {
-                    $filePath = $form->data[$fieldName]['stored_path'];
-                    $deleted = Storage::disk('local')->delete($filePath);
-                    // todo: tratar erro se não conseguir remover o arquivo, geralmente por problemas de permissão
-                    unset($data[$fieldName]);
-                }
-            }
-        }
-
-        // trata upload de arquivos (novos ou substituindo existentes)
-        if ($request->hasFile('file')) {
-            foreach ($request->file('file') as $fieldName => $file) {
-                if (isset($form->data[$fieldName])) {
-                    // se já existe um arquivo nesse campo, vamos remover o antigo
-                    $filePath = $data[$fieldName]['stored_path'];
-                    $deleted = Storage::disk('local')->delete($filePath);
-                    // tratar erro se não conseguir remover o arquivo, geralmente por problemas de permissão
-                    unset($data[$fieldName]);
-                }
-                $fileHash = md5_file($file->path());
-                $extension = $file->getClientOriginalExtension();
-                $name = $file->getClientOriginalName();
-                $originalName = Str::slug(pathinfo($name, PATHINFO_FILENAME)) . '.' . $extension;
-
-                $storedName = 'id' . $form->id . '-' . $fileHash . '.' . $extension;
-                $path = $file->storeAs('formsubmissions/' . date('Y'), $storedName, 'local');
-                if (!$path) {
-                    // tratar erro se não conseguir salvar o arquivo, geralmente por problemas de permissão
-                }
-                $data[$fieldName] = [
-                    'original_name' => $originalName,
-                    'stored_path' => $path,
-                    'content_hash' => $fileHash,
-                ];
-            }
-        }
-
-        $form->data = $data;
-        $form->save();
-
-        return $form;
-    }
-
-    /**
-     * Validate form submission and return standardized response.
-     *
-     * @return array
-     */
-    public function validate($request)
-    {
-        if (!($definition = $this->getDefinitionFromRequest($request))) {
-            return [
-                'status' => 'error',
-                'message' => 'Erro ao buscar o formDefinition',
-            ];
-        }
-
-        $rules = $this->getValidationRules($definition);
-        $validator = Validator::make($request->all(), $rules);
-
-        if ($validator->fails()) {
-            return [
-                'status' => 'error',
-                'errors' => $validator->errors(),
-                'data' => $request->only(array_keys($rules)),
-            ];
-        }
-
-        return [
-            'status' => 'success',
-            'data' => $request->only(array_keys($rules)),
-        ];
     }
 
     /**
@@ -286,24 +155,6 @@ class Form
         $field['old'] = null;
 
         return $field;
-    }
-
-    /**
-     * Generates HTML FORM from Form Definition
-     *
-     * @param String $formName ID of form definition
-     * @return String HTML formatted
-     */
-    public function generateHtml(?string $formName = null, $formSubmission = null)
-    {
-        $this->definition = $formSubmission?->formDefinition
-            ?? $this->getDefinition($formName ?? $this->name);
-
-        if (!$this->definition) {
-            return null;
-        }
-
-        return $this->generateHtmlFromDefinition($this->definition, $formSubmission);
     }
 
     public function generateHtmlFromDefinition(FormDefinition $definition, $formSubmission = null)
@@ -410,69 +261,6 @@ class Form
     }
 
     /**
-     * List form submissions filtering by the value of a given field
-     */
-    public function whereSubmissionContains($field, $string)
-    {
-        if ($this->admin == true) {
-            return FormSubmission::all();
-        } else {
-            return FormSubmission::whereJsonContains('data->' . $field, (string) $string)->get();
-        }
-    }
-
-    /**
-     * Lista as submissões com filtro
-     *
-     * Operadores permitidos: contains, =, ==, !=, empty, not_empty
-     *
-     * @param string $field Nome do campo do json dentro de data a ser filtrado
-     * @param string $operator Operador de comparação.
-     * @param mixed $value Valor a ser comparado. Pode ser string, array ou null
-     * @return \Illuminate\Database\Eloquent\Collection
-     */
-    public function filterSubmissionByField($field, $operator, $value = null)
-    {
-        $jsonField = "data->$field";
-
-        $query = new FormSubmission;
-        if ($this->name) {
-            $query::where('form_definition_id', $this->getDefinition($this->name)->id);
-        }
-        if ($this->key) {
-            $query::where('key', $this->key);
-        }
-
-        return match ($operator) {
-            'contains' => $query::whereJsonContains($jsonField, (string) $value)->get(),
-
-            '=', '==' => $query::where($jsonField, $value)->get(),
-
-            '!=' => $query::where($jsonField, '!=', $value)->get(),
-
-            'empty' => $query::where(function ($query) use ($jsonField) {
-                $query->whereNull($jsonField)->orWhere($jsonField, '');
-            })->get(),
-
-            'not_empty' => $query::where(function ($query) use ($jsonField) {
-                $query->whereNotNull($jsonField)->where($jsonField, '!=', '');
-            })->get(),
-
-            default => throw new \InvalidArgumentException(
-                sprintf("Operador '%s' não suportado.", $operator)
-            ),
-        };
-    }
-
-    /**
-     * Retorna uma submissão pelo id
-     */
-    public function getSubmission($id)
-    {
-        return FormSubmission::find($id);
-    }
-
-    /**
      * Retorna as últimas 20 activities de uma submissão
      *
      * Retorna primeiro as mais recentes.
@@ -482,54 +270,6 @@ class Form
     public function getSubmissionActivities($id, $take = 20)
     {
         return Activity::orderBy('created_at', 'DESC')->where('subject_id', $id)->take($take)->get();
-    }
-
-    /**
-     * Updates a form submission and registers the activity
-     */
-    public function updateSubmission(Request $request, $formSubmissionId)
-    {
-        if ($this->editable) {
-            $request->id = $formSubmissionId;
-            $formSubmission = $this->handleSubmission($request);
-
-            return $formSubmission;
-        }
-        return false;
-    }
-
-    /**
-     * Downloads a file from a form submission given the field name
-     */
-    public function downloadSubmissionFile(FormSubmission $formSubmission, $fieldName)
-    {
-        $path = $formSubmission->data[$fieldName]['stored_path'] ?? null;
-        if (!Storage::exists($path)) {
-            return abort(404, 'Arquivo não encontrado');
-        }
-
-        $nomeDownload = preg_replace('/[\x00-\x1F\x7F\/\\\\]/', '-', basename($path));
-        $nomeDownload = $formSubmission->data[$fieldName]['original_name'] ?? $nomeDownload;
-
-        return response()->download(Storage::path($path), null, [
-            'Content-Type' => Storage::mimeType($path),
-        ])->setContentDisposition('attachment', $nomeDownload);
-    }
-
-    /**
-     * Deletes a form submission and registers the activity
-     */
-    public function deleteSubmission($id, $user = null)
-    {
-        $user = $user ?? Auth::user();
-        $submission = $this->getSubmission($id);
-
-        $mockSubmission = $submission;
-        if ($submission->delete()) {
-            activity()->performedOn($mockSubmission)->causedBy($user)->log('Chave excluída');
-            return $mockSubmission;
-        }
-        return false;
     }
 
     /**
@@ -549,26 +289,6 @@ class Form
             ->where('status', FormDefinitionStatus::Active->value)
             ->orderByDesc('version')
             ->first();
-    }
-
-    protected function getDefinitionFromRequest(Request $request): ?FormDefinition
-    {
-        if ($request->filled('form_definition_id')) {
-            return FormDefinition::find((int) $request->input('form_definition_id'));
-        }
-
-        $this->version = $request->filled('version') ? (int) $request->input('version') : $this->version;
-
-        return $this->getDefinition($request->form_definition);
-    }
-
-    /**
-     * Return form definitions for a group
-     */
-    public function listDefinition($formGroup = null)
-    {
-        $where[] = $formGroup ? ['group', $formGroup] : ['group', $this->group];
-        return FormDefinition::where($where)->get();
     }
 
     /**
