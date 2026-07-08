@@ -1,7 +1,11 @@
 {{-- 
 
   DEPRECADO: usar componente
-  <x-uspdev-forms::submissions-table :form="$form"></x-submission-table>
+  <x-uspdev-forms::submissions-table
+    :form="$form"
+    :definition="$definition"
+    :submissions="$submissions"
+  ></x-submission-table>
 
   Esta é uma diretiva blade.
   @submissionTable($form)
@@ -10,7 +14,7 @@
 <table class="table table-striped table-bordered datatable-simples w-100" style="table-layout: fixed; width: 100%;">
   <thead>
     <tr>
-      @foreach ($form->getDefinition()->flattenFields() as $field)
+      @foreach ($definition->flattenFields() as $field)
         <th>{{ $field['label'] ?? $field['name'] }}</th>
       @endforeach
       @if ($form->editable)
@@ -19,9 +23,9 @@
     </tr>
   </thead>
   <tbody>
-    @foreach ($form->listSubmission($form->name) as $submission)
+    @foreach ($submissions as $submission)
       <tr>
-        @foreach ($form->getDefinition()->flattenFields() as $field)
+        @foreach ($definition->flattenFields() as $field)
           <td style="overflow: hidden; text-overflow: ellipsis; ">
             @if ($field['type'] == 'pessoa-usp')
               {{ $submission['data'][$field['name']] }}

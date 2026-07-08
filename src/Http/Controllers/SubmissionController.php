@@ -22,8 +22,9 @@ class SubmissionController extends Controller
         \UspTheme::activeUrl(route('form-definitions.index'));
 
         $form = app(FormRendererService::class)->listingForm($formDefinition, Auth::user());
+        $submissions = $formDefinition->formSubmissions()->get();
 
-        return view('uspdev-forms::submission.index', compact('form', 'formDefinition'));
+        return view('uspdev-forms::submission.index', compact('form', 'formDefinition', 'submissions'));
     }
 
     public function create(FormDefinition $formDefinition)

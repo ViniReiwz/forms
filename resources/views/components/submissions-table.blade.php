@@ -2,15 +2,15 @@
   Mostra uma tabela com as submissões de um formulário.
   
   Chamar com:
-  <x-uspdev-forms::submissions-table :form="$form"></x-submission-table>
+  <x-uspdev-forms::submissions-table
+    :form="$form"
+    :definition="$definition"
+    :submissions="$submissions"
+  ></x-submission-table>
 
   masakik, 29/5/2025
  --}}
-@props(['form' => $form])
-
-@php
-  $definition = $form->getDefinition();
-@endphp
+@props(['form', 'definition', 'submissions'])
 <div class="table-responsive">
   <table class="table table-striped table-bordered datatable-simples">
     <thead>
@@ -22,9 +22,9 @@
       </tr>
     </thead>
     <tbody>
-      @foreach ($form->listSubmission($form->name) as $submission)
+      @foreach ($submissions as $submission)
         <tr>
-          @foreach ($form->getDefinition()->flattenFields() as $field)
+          @foreach ($definition->flattenFields() as $field)
             <td>
               @includeFirst([
                   'uspdev-forms::partials.' . $field['type'] . '-view',

@@ -3,9 +3,7 @@
 namespace Uspdev\Forms;
 
 use Uspdev\Forms\Models\FormDefinition;
-use Uspdev\Forms\Models\FormSubmission;
 use Spatie\Activitylog\Models\Activity;
-use Uspdev\Forms\Enums\FormDefinitionStatus;
 
 class Form
 {
@@ -143,123 +141,6 @@ class Form
         return $parts->implode('|');
     }
 
-    protected static function addFieldGenParams($field)
-    {
-        $field['bs'] = config('uspdev-forms.bootstrapVersion');
-        $field['required'] = isset($field['required']) ? $field['required'] : false;
-        $field['requiredLabel'] = $field['required'] ? ' <span class="text-danger">*</span>' : '';
-        $field['formGroupClass'] = $field['bs'] == 5 ? 'mb-3' : 'form-group';
-        $field['controlClass'] = 'form-control ' . (config('uspdev-forms.formSize') == 'small' ? ' form-control-sm ' : '');
-        $field['id'] = 'uspdev-forms-' . $field['name'];
-
-        $field['old'] = null;
-
-        return $field;
-    }
-
-    public function generateHtmlFromDefinition(FormDefinition $definition, $formSubmission = null)
-    {
-        $this->definition = $definition;
-
-        $fields = '';
-        foreach ($this->definition->fields as $field) {
-            $has_sep = false;
-
-            if (array_is_list($field)) {
-
-                // Verifica se há a necessidade de um separador entre esta linha e a anteriror
-                if ($field[0]['type'] == 'separator') {
-                    $fields .=
-                        '<div class="d-flex align-items-center mt-5 mb-2">
-                        <h6 class="text-secondary mr-2 ">
-                            <strong>' . ($field[0]['label'] ?? '') . '</strong>
-                        </h6>
-                        <div class="flex-grow-1 border mb-2"></div>
-                    </div>';
-                }
-
-                // agrupando campos na mesma linha: igual para bs4 e bs5
-                $fields .= '<div class="row">';
-
-                foreach ($field as $f) {
-                    if ($f['type'] != 'separator') {
-                        $colClass = 'col';
-                        if (isset($f['width']) && is_numeric($f['width'])) {
-                            $width = (int) $f['width'];
-                            if ($width >= 1 && $width <= 12) {
-                                $colClass = 'col-' . $width;
-                            }
-                        }
-                        $fields .= '<div class="' . $colClass . '">' . $this->generateField($f, $formSubmission) . '</div>';
-                    }
-                }
-                $fields .= '</div>';
-            } else {
-                // a linha possui um campo somente
-                if (isset($field['width']) && is_numeric($field['width'])) {
-                    $width = (int) $field['width'];
-                    if ($width >= 1 && $width <= 12) {
-                        $fields .= '<div class="col-' . $width . '">' . $this->generateField($field, $formSubmission) . '</div>';
-                        continue;
-                    }
-                }
-
-                $fields .= $this->generateField($field, $formSubmission);
-            }
-        }
-        if ($formSubmission) {
-            $this->btnLabel = 'Atualizar';
-        }
-
-        return view('uspdev-forms::partials.form', [
-            'form' => $this,
-            'fields' => $fields,
-        ])->render();
-    }
-
-    /**
-     * Generates fields for the form generator
-     */
-    protected function generateField($field, $formSubmission)
-    {
-        // tipos de entradas do form conhecidos
-        $types = ['textarea', 'select', 'checkbox', 'hidden', 'time', 'date', 'file', 'pessoa-usp', 'disciplina-usp', 'patrimonio-usp', 'local-usp'];
-
-        $field = Form::addFieldGenParams($field);
-
-        if (isset($formSubmission->data[$field['name']])) {
-            $field['old'] = $formSubmission->data[$field['name']];
-        }
-
-        // vamos escolher o template do input com base no 'type'
-        if (in_array($field['type'], $types)) {
-            $html = view('uspdev-forms::partials.' . $field['type'], compact('field'))->render();
-        } else {
-            $html = view('uspdev-forms::partials.default', compact('field'))->render();
-        }
-
-        return $html;
-    }
-
-    /**
-     * List form submissions filtering by key and optionally by formName
-     *
-     * If there's no specific key, it lists all submissions
-     */
-    public function listSubmission($formName = null)
-    {
-        $cond = [];
-        if ($this->key != config('uspdev-forms.defaultKey')) {
-            $cond['key'] = $this->key;
-        }
-
-        if ($formName) {
-            $cond['form_definition_id'] = $this->getDefinition($formName)->id;
-        }
-
-        return FormSubmission::where($cond)->get();
-    }
-
     /**
      * Retorna as últimas 20 activities de uma submissão
      *
@@ -270,25 +151,6 @@ class Form
     public function getSubmissionActivities($id, $take = 20)
     {
         return Activity::orderBy('created_at', 'DESC')->where('subject_id', $id)->take($take)->get();
-    }
-
-    /**
-     * Returns form definition by form name
-     */
-    public function getDefinition($formName = null)
-    {
-        $name = $formName ?? $this->name;
-
-        if ($this->version) {
-            return FormDefinition::where('name', $name)
-                ->where('version', $this->version)
-                ->first();
-        }
-
-        return FormDefinition::where('name', $name)
-            ->where('status', FormDefinitionStatus::Active->value)
-            ->orderByDesc('version')
-            ->first();
     }
 
     /**
