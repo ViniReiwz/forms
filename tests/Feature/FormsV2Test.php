@@ -5,6 +5,7 @@ namespace Uspdev\Forms\Tests\Feature;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
+use Spatie\Activitylog\Models\Activity;
 use Uspdev\Forms\Facades\Forms;
 use Uspdev\Forms\Enums\FormDefinitionStatus;
 use Uspdev\Forms\Models\FormDefinition;
@@ -222,6 +223,60 @@ class FormsV2Test extends TestCase
         $this->assertInstanceOf(FormSubmission::class, $deletedByModel);
         $this->assertSoftDeleted('form_submissions', ['id' => $facadeSubmission->id]);
         $this->assertSoftDeleted('form_submissions', ['id' => $modelSubmission->id]);
+    }
+
+    public function test_facade_exposes_submission_activities_and_activity_detail(): void
+    {
+        $definition = $this->definition();
+        $submission = FormSubmission::create([
+            'form_definition_id' => $definition->id,
+            'key' => 'workflow-123',
+            'data' => ['resultado' => 'aprovado'],
+        ]);
+        $otherSubmission = FormSubmission::create([
+            'form_definition_id' => $definition->id,
+            'key' => 'workflow-456',
+            'data' => ['resultado' => 'reprovado'],
+        ]);
+
+        Activity::query()->update([
+            'created_at' => now()->subMinutes(10),
+            'updated_at' => now()->subMinutes(10),
+        ]);
+
+        $older = Activity::create([
+            'log_name' => 'default',
+            'description' => 'mais antiga',
+            'subject_type' => FormSubmission::class,
+            'subject_id' => $submission->id,
+            'properties' => [],
+            'created_at' => now()->subMinute(),
+            'updated_at' => now()->subMinute(),
+        ]);
+        $newer = Activity::create([
+            'log_name' => 'default',
+            'description' => 'mais recente',
+            'subject_type' => FormSubmission::class,
+            'subject_id' => $submission->id,
+            'properties' => [],
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        Activity::create([
+            'log_name' => 'default',
+            'description' => 'outra submissao',
+            'subject_type' => FormSubmission::class,
+            'subject_id' => $otherSubmission->id,
+            'properties' => [],
+        ]);
+
+        $activities = Forms::submissionActivities($submission, 2);
+
+        $this->assertCount(2, $activities);
+        $this->assertSame([$newer->id, $older->id], $activities->pluck('id')->all());
+        $this->assertCount(2, Forms::submissionActivities($submission->id, 2));
+        $this->assertCount(0, Forms::submissionActivities(999999, 2));
+        $this->assertSame('mais recente', Forms::activity($newer->id)->description);
     }
 
     public function test_definition_service_creates_updates_and_purges_trashed_submissions(): void
