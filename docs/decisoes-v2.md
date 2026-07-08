@@ -28,7 +28,9 @@ Quando duas formas públicas existem para o mesmo comportamento, elas devem usar
 
 ## Form como implementação interna
 
-`Uspdev\Forms\Form` permanece no pacote para concentrar ou reaproveitar regras existentes de renderização, validação de submissão, upload e download. Ela não aparece como API recomendada na documentação pública.
+`Uspdev\Forms\Form` permanece no pacote apenas como objeto interno de contexto para as views e para regras estáticas de validação reaproveitadas pelos serviços.
+
+Ela não é API pública recomendada e não concentra mais fluxos de submissão, renderização, consulta, upload, download ou auditoria. Essas responsabilidades ficam em `FormsService`, `FormRendererService`, `FormSubmissionService`, `FormSubmissionFileService` e nos models públicos.
 
 ## Versionamento aprovado
 
@@ -78,4 +80,5 @@ Justificativa:
 
 * `FormSubmission` já representa o dado submetido;
 * a auditoria operacional existente continua usando `spatie/laravel-activitylog`;
+* a consulta pública de auditoria é feita por `Forms::submissionActivities()` e `Forms::activity()`;
 * histórico próprio só é reavaliado se houver necessidade de diff estruturado, rollback, snapshots completos por edição ou auditoria independente do Spatie.

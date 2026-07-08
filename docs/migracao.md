@@ -141,6 +141,29 @@ $submissions = Forms::submissions('parecer_final', key: 'workflow-123');
 $submissionsV1 = Forms::submissions('parecer_final', 1, 'workflow-123');
 ```
 
+## Mapa de equivalências da API antiga
+
+Os métodos públicos antigos de `Uspdev\Forms\Form` deixam de ser contrato público. A tabela abaixo mostra para onde cada uso deve migrar.
+
+| API antiga | Substituição atual | Observação |
+| --- | --- | --- |
+| `(new Form($config))->generateHtml($name)` | `Forms::render($name, $config)` ou `Forms::render($name, $version, $config)` | Comportamento preservado; a versão ativa é usada quando `version` é omitida. |
+| `Form::handleSubmission($request)` | `Forms::submit($request)` para criar ou `Forms::update($request, $submission)` para editar | O fluxo deixa de decidir por `$request->id`; criação e edição ficam explícitas. Falhas lançam exceção. |
+| `Form::validate($request)` | `Forms::validate($request, $name, $version)` ou `$definition->validateData($request)` | O retorno passa a ser apenas os dados validados; falhas lançam `ValidationException`. |
+| `Form::updateSubmission($request, $id)` | `Forms::update($request, $submission)` ou `Forms::update($request, $id)` | O formulário precisa ser resolvido pela submissão existente. |
+| `Form::downloadSubmissionFile($submission, $field)` | `Forms::downloadFile($submission, $field)` ou `$submission->download($field)` | Comportamento preservado. |
+| `Form::deleteSubmission($id, $user)` | `Forms::deleteSubmission($submission, $user)` ou `$submission->deleteWithActivity($user)` | Comportamento preservado. |
+| `Form::getSubmission($id)` | `Forms::submission($id)` | Comportamento preservado. |
+| `Form::getDefinition($name)` | `Forms::definition($name)` ou `Forms::definition($name, $version)` | `name` agora identifica o formulário lógico; use `version` para uma versão concreta. |
+| `Form::listDefinition($group)` | `Forms::definitions($group)` | Comportamento preservado. |
+| `Form::listSubmission($name)` | `Forms::submissions($name, $version, $key)` | Use `key` explicitamente quando quiser filtrar por chave. |
+| `Form::whereSubmissionContains($field, $value)` | `Forms::filterSubmissions($name, field: $field, operator: 'contains', value: $value)` | O atalho antigo que retornava todas as submissões quando `admin=true` não existe mais; autorização e escopo devem ficar no consumidor. |
+| `Form::filterSubmissionByField($field, $operator, $value)` | `Forms::filterSubmissions($name, field: $field, operator: $operator, value: $value)` | O operador aceito para igualdade é `==`; `=` não faz parte do novo contrato. |
+| `Form::getSubmissionActivities($id)` | `Forms::submissionActivities($submission, $take)` | Aceita id ou model da submissão e retorna as activities mais recentes. |
+| `Form::detailActivity($id)` | `Forms::activity($id)` | Retorna uma activity pelo id ou lança `ModelNotFoundException`. |
+
+A classe `Uspdev\Forms\Form` permanece apenas como detalhe interno do pacote. Consumidores não devem depender dela para renderizar, submeter, consultar, baixar arquivos, excluir submissões ou consultar auditoria.
+
 ## Orientação para workflow
 
 Sistemas de workflow normalmente associam formulários a transições.

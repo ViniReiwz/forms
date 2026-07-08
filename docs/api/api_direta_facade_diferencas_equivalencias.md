@@ -41,6 +41,8 @@ Estes fluxos localizam, resolvem, listam, filtram ou sincronizam entidades. Eles
 | `Forms::submission($id)` | Localiza uma submissão por id. Antes da chamada, ainda não há `FormSubmission` carregada. |
 | `Forms::submissions($name, $version = null, $key = null)` | Consulta submissões a partir de uma definição resolvida por `name` e `version`. |
 | `Forms::filterSubmissions($name, $version = null, $field = null, $operator = null, $value = null, $key = null)` | Centraliza filtros por campo JSON, operador, valor e chave. |
+| `Forms::submissionActivities($submission, $take = 20)` | Lista as activities mais recentes de uma submissão por id ou model. |
+| `Forms::activity($id)` | Localiza uma activity específica por id. |
 | `Forms::syncFromDirectory($directory)` | Sincroniza arquivos JSON com `form_definitions`; é uma operação de orquestração sobre arquivos e banco. |
 
 Na API direta, consultas equivalentes podem ser feitas com Eloquent quando a entidade já existe, por exemplo:

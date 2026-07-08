@@ -179,6 +179,16 @@ return Forms::downloadFile($submission, 'arquivo');
 ```php
 $deleted = Forms::deleteSubmission($submission, auth()->user());
 ```
+
+## Auditoria
+
+```php
+$activities = Forms::submissionActivities($submission, 20);
+$activity = Forms::activity($activityId);
+```
+
+`submissionActivities()` retorna as activities mais recentes de uma submissão. `activity()` busca uma activity específica pelo id ou lança `ModelNotFoundException`.
+
 ## Sincronização
 
 ```php

@@ -8,7 +8,7 @@ Esta é a porta de entrada da documentação técnica do `uspdev/forms`. Os link
    Descreve como `form_definitions` funciona, como `name + version` identifica uma versão concreta e como a versão ativa é escolhida.
 
 2. [API via facade](api/api_facade.md)  
-   Lista os fluxos pela facade: renderização, submissão, atualização, consulta, filtros, arquivos, exclusão e sincronização.
+   Lista os fluxos pela facade: renderização, submissão, atualização, consulta, filtros, arquivos, exclusão, auditoria e sincronização.
 
 3. [API direta](api/api_direta.md)  
    Espelha os mesmos fluxos pela abordagem direta em `FormDefinition` e `FormSubmission`.
@@ -33,7 +33,7 @@ Esta é a porta de entrada da documentação técnica do `uspdev/forms`. Os link
 
 ## Resumo
 
-`uspdev/forms` é uma biblioteca Laravel para definir formulários dinâmicos, renderizar HTML a partir dessas definições, validar dados com ou sem persistência, consultar dados submetidos e manipular arquivos enviados.
+`uspdev/forms` é uma biblioteca Laravel para definir formulários dinâmicos, renderizar HTML a partir dessas definições, validar dados com ou sem persistência, consultar dados submetidos, manipular arquivos enviados e acessar auditoria operacional.
 
 A API pública oficial é a facade `Uspdev\Forms\Facades\Forms`. A classe `Uspdev\Forms\Form` permanece no pacote como implementação interna e não é usada diretamente por sistemas consumidores.
 

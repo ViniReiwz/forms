@@ -27,6 +27,15 @@ Contém as submissões de formulários.
 
 A auditoria operacional de submissões continua usando `spatie/laravel-activitylog`.
 
+As consultas públicas de auditoria ficam na facade:
+
+```php
+$activities = Forms::submissionActivities($submission, 20);
+$activity = Forms::activity($activityId);
+```
+
+`submissionActivities()` aceita uma `FormSubmission` ou um id de submissão e retorna as activities mais recentes. `activity()` retorna uma activity específica pelo id.
+
 Não existe `form_submission_history` nesta versão. O histórico próprio só é reavaliado se houver necessidade de diff estruturado, rollback, snapshots completos por edição ou auditoria independente do Spatie.
 
 ## Relacionamento
