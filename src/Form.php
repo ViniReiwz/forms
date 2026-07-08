@@ -3,7 +3,6 @@
 namespace Uspdev\Forms;
 
 use Uspdev\Forms\Models\FormDefinition;
-use Spatie\Activitylog\Models\Activity;
 
 class Form
 {
@@ -141,26 +140,4 @@ class Form
         return $parts->implode('|');
     }
 
-    /**
-     * Retorna as últimas 20 activities de uma submissão
-     *
-     * Retorna primeiro as mais recentes.
-     * A quantidade pode ser personalizada pelo parâmeto $take
-     *
-     */
-    public function getSubmissionActivities($id, $take = 20)
-    {
-        return Activity::orderBy('created_at', 'DESC')->where('subject_id', $id)->take($take)->get();
-    }
-
-    /**
-     * Retorna informações detalhadas de uma activity de submissão, incluindo os dados do formulário no momento da atividade.
-     *
-     * @param int $id ID da atividade a ser detalhada
-     * @return \Spatie\Activitylog\Models\Activity
-     */
-    public function detailActivity($id)
-    {
-        return Activity::findOrFail($id);
-    }
 }

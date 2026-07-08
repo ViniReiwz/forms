@@ -17,6 +17,8 @@ use Illuminate\Support\Facades\Facade;
  * @method static \Illuminate\Support\Collection filterSubmissions(string $name, int|string|null $version = null, ?string $field = null, ?string $operator = null, mixed $value = null, ?string $key = null)
  * @method static \Symfony\Component\HttpFoundation\BinaryFileResponse downloadFile(\Uspdev\Forms\Models\FormSubmission|int $submission, string $fieldName)
  * @method static \Uspdev\Forms\Models\FormSubmission|false deleteSubmission(\Uspdev\Forms\Models\FormSubmission|int $submission, ?\App\Models\User $user = null)
+ * @method static \Illuminate\Support\Collection submissionActivities(\Uspdev\Forms\Models\FormSubmission|int $submission, int $take = 20)
+ * @method static \Spatie\Activitylog\Models\Activity activity(int $id)
  * @method static array syncFromDirectory(string $directory)
  */
 class Forms extends Facade

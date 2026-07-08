@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
+use Spatie\Activitylog\Models\Activity;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Uspdev\Forms\Enums\FormDefinitionStatus;
 use Uspdev\Forms\Models\FormDefinition;
@@ -217,6 +218,27 @@ class FormsService
     public function deleteSubmission(FormSubmission|int $submission, ?User $user = null): FormSubmission|false
     {
         return app(FormSubmissionFileService::class)->deleteWithActivity($this->resolveSubmission($submission), $user);
+    }
+
+    /**
+     * Retorna as activities mais recentes de uma submissão.
+     */
+    public function submissionActivities(FormSubmission|int $submission, int $take = 20): Collection
+    {
+        $submissionId = $submission instanceof FormSubmission ? $submission->id : $submission;
+
+        return Activity::orderBy('created_at', 'DESC')
+            ->where('subject_id', $submissionId)
+            ->take($take)
+            ->get();
+    }
+
+    /**
+     * Retorna uma activity pelo id ou lança ModelNotFoundException.
+     */
+    public function activity(int $id): Activity
+    {
+        return Activity::findOrFail($id);
     }
 
     /**
