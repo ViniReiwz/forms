@@ -48,6 +48,17 @@ Chamadas públicas que recebem `name` e `version` podem omitir `version`. Nesse 
 
 Essa regra melhora a ergonomia para casos comuns, mas consumidores que exigem reprodutibilidade informam a versão explicitamente.
 
+## Proteção da versão ativa no banco
+
+A regra de no máximo uma versão ativa por `name` é parte do contrato público da V2. Por isso, ela não fica apenas no service/model.
+
+A migration também cria uma proteção de banco:
+
+* PostgreSQL e SQLite usam índice único parcial em `name` para linhas com `status = active`;
+* MySQL e MariaDB usam uma coluna auxiliar interna e triggers, evitando dependência de generated columns e preservando compatibilidade com versões mais antigas.
+
+Essa decisão adiciona complexidade à migration, mas evita que escritas diretas, jobs concorrentes ou mudanças futuras deixem duas versões ativas para o mesmo formulário lógico.
+
 ## Uso sem persistência aprovado
 
 A V2 permite o uso do `forms` sem persistir os dados submetidos.

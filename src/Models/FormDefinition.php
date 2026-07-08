@@ -55,15 +55,13 @@ class FormDefinition extends Model
                 'description' => $model->description,
                 'fields' => $model->fields,
             ], $model->id);
-        });
 
-        static::saved(function ($model) {
             if ($model->status !== FormDefinitionStatus::Active) {
                 return;
             }
 
             static::where('name', $model->name)
-                ->where('id', '!=', $model->id)
+                ->when($model->exists, fn ($query) => $query->where('id', '!=', $model->id))
                 ->where('status', FormDefinitionStatus::Active->value)
                 ->update(['status' => FormDefinitionStatus::Disabled->value]);
         });

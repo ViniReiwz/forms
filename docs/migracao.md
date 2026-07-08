@@ -8,6 +8,32 @@ Migrar do uso direto de `Uspdev\Forms\Form` para a facade `Uspdev\Forms\Facades\
 
 Sistemas que não puderem migrar para este contrato devem permanecer na versão anterior do pacote.
 
+## Premissas da migração de banco
+
+A migration de versionamento parte da tabela legada original, em que `form_definitions.name` era único e ainda não existiam `version` e `status`.
+
+Nesse cenário, cada definição existente é convertida para `version = 1` e `status = active`. Esse preenchimento automático representa a versão inicial do formulário que já existia antes da V2.
+
+Estados intermediários não são corrigidos por inferência silenciosa. A migration falha e exige correção manual quando encontra, por exemplo:
+
+* múltiplas linhas do mesmo `name` com `version = NULL`;
+* `version = NULL` em conflito com uma linha já existente em `version = 1`;
+* duplicidade de `name + version`;
+* `version` menor que `1`;
+* `status` diferente de `draft`, `active` ou `disabled`.
+
+Apenas `status = NULL` é convertido automaticamente para `active`, para preservar o comportamento legado em que toda definição existente era a definição utilizável.
+
+Depois da migration, `name + version` identifica uma versão concreta, `version` e `status` são obrigatórios, e o banco impede que exista mais de uma versão `active` para o mesmo `name`.
+
+Em MySQL e MariaDB, essa última regra usa uma coluna auxiliar interna e triggers. Após atualizar em ambiente com esses bancos, valide manualmente que:
+
+* a migration criou os triggers de `form_definitions`;
+* um `INSERT` ou `UPDATE` direto tentando deixar duas versões `active` para o mesmo `name` falha;
+* salvar uma nova versão ativa pela biblioteca continua desativando a versão anterior.
+
+O rollback dessa mudança é conceitualmente limitado: após existirem múltiplas versões para o mesmo `name`, voltar para o modelo antigo de `name` único pode falhar ou exigir perda/colapso de versões. Trate a migration como mudança estrutural de ida para ambientes com dados versionados.
+
 ## Breaking Changes
 
 **[BREAKING CHANGE]** `Uspdev\Forms\Form` deixa de ser a API pública para consumidores externos. A integração deve passar pela facade `Uspdev\Forms\Facades\Forms`.

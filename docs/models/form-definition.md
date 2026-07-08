@@ -7,9 +7,9 @@ Uma `form_definition` descreve um formulário e sua estrutura de campos. Cada re
 | Campo | Tipo/Observação |
 | ----- | --------------- |
 | id | PK |
-| name | string; identifica o formulário lógico |
-| version | inteiro positivo; identifica uma versão concreta |
-| status | `draft`, `active` ou `disabled`; indica o estado da versão |
+| name | string obrigatório; identifica o formulário lógico |
+| version | inteiro positivo obrigatório; identifica uma versão concreta |
+| status | obrigatório; `draft`, `active` ou `disabled`; indica o estado da versão |
 | group | string |
 | description | string nullable |
 | fields | JSON com a estrutura dos campos |
@@ -19,9 +19,10 @@ Uma `form_definition` descreve um formulário e sua estrutura de campos. Cada re
 ## Regras de versionamento
 
 * `name` não é único isoladamente.
-* `name + version` é único.
+* `name + version` é único no banco.
 * Existe no máximo uma versão ativa para cada `name`.
-* Quando uma versão é marcada como ativa, as demais versões do mesmo `name` são desativadas pelo service/model.
+* Quando uma versão é marcada como ativa, as demais versões do mesmo `name` são desativadas pelo service/model antes do salvamento.
+* O banco também protege a regra de uma única versão ativa por `name`.
 * Sistemas externos podem referenciar uma versão explícita com `name + version`.
 * Quando `version` é omitida em chamadas públicas, a biblioteca usa a versão ativa do `name`.
 

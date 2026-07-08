@@ -14,10 +14,10 @@
 | Item | Regra |
 | ---- | ----- |
 | name | obrigatório, string, máximo 255 |
-| version | obrigatório, inteiro positivo |
-| name + version | é único |
-| status | obrigatório; `draft`, `active` ou `disabled`; default `active` quando omitido no sync |
-| active por name | apenas uma versão ativa por `name` |
+| version | obrigatório, inteiro positivo, não nulo |
+| name + version | é único no banco |
+| status | obrigatório, não nulo; `draft`, `active` ou `disabled`; default `active` quando omitido no sync |
+| active por name | apenas uma versão ativa por `name`, protegida pelo model/service e por restrição de banco |
 | group | obrigatório, string, máximo 255 |
 | description | nullable, string, máximo 255 |
 | fields | obrigatório, array, com ao menos um campo |
@@ -49,4 +49,6 @@ Casos rejeitados incluem:
 
 ## Ativação de versão
 
-Quando uma definição é salva com `status = active`, a biblioteca marca as demais definições com o mesmo `name` como `disabled`. Esse comportamento preserva a regra de uma única versão ativa por formulário lógico mesmo em bancos sem suporte simples a índice parcial.
+Quando uma definição é salva com `status = active`, a biblioteca marca as demais definições com o mesmo `name` como `disabled` antes de salvar a versão ativa. Esse comportamento preserva a regra de uma única versão ativa por formulário lógico e permite que a restrição de banco funcione como proteção adicional.
+
+Em PostgreSQL e SQLite essa proteção usa índice único parcial sobre `name` para linhas com `status = active`. Em MySQL e MariaDB, por compatibilidade com versões antigas, a migration usa uma coluna auxiliar interna e triggers para manter o mesmo efeito.

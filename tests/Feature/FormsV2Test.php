@@ -3,8 +3,13 @@
 namespace Uspdev\Forms\Tests\Feature;
 
 use Illuminate\Http\Request;
+use Illuminate\Database\QueryException;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
+use RuntimeException;
 use Spatie\Activitylog\Models\Activity;
 use Uspdev\Forms\Facades\Forms;
 use Uspdev\Forms\Enums\FormDefinitionStatus;
@@ -331,6 +336,199 @@ class FormsV2Test extends TestCase
         $this->assertSame([], $service->list($definition));
     }
 
+    public function test_versioning_migration_converts_original_legacy_table(): void
+    {
+        $this->createLegacyDefinitionsTable(withVersion: false, withStatus: false, uniqueName: true);
+
+        DB::table('form_definitions')->insert([
+            [
+                'name' => 'parecer_final',
+                'group' => 'workflow',
+                'description' => 'Legado',
+                'fields' => json_encode([['name' => 'resultado', 'type' => 'text']]),
+            ],
+            [
+                'name' => 'outro_form',
+                'group' => 'workflow',
+                'description' => 'Legado',
+                'fields' => json_encode([['name' => 'resultado', 'type' => 'text']]),
+            ],
+        ]);
+
+        $this->runVersioningMigration();
+
+        $this->assertSame(
+            ['version' => 1, 'status' => 'active'],
+            (array) DB::table('form_definitions')
+                ->where('name', 'parecer_final')
+                ->select('version', 'status')
+                ->first()
+        );
+        $this->assertTrue(Schema::hasIndex('form_definitions', ['name', 'version'], 'unique'));
+    }
+
+    public function test_versioning_migration_normalizes_safe_intermediate_values_and_active_versions(): void
+    {
+        $this->createLegacyDefinitionsTable(withVersion: true, withStatus: true);
+
+        DB::table('form_definitions')->insert([
+            [
+                'name' => 'parecer_final',
+                'version' => 1,
+                'status' => 'active',
+                'group' => 'workflow',
+                'description' => 'V1',
+                'fields' => json_encode([['name' => 'resultado', 'type' => 'text']]),
+            ],
+            [
+                'name' => 'parecer_final',
+                'version' => 2,
+                'status' => 'active',
+                'group' => 'workflow',
+                'description' => 'V2',
+                'fields' => json_encode([['name' => 'resultado', 'type' => 'text']]),
+            ],
+            [
+                'name' => 'outro_form',
+                'version' => null,
+                'status' => null,
+                'group' => 'workflow',
+                'description' => 'Sem status',
+                'fields' => json_encode([['name' => 'resultado', 'type' => 'text']]),
+            ],
+        ]);
+
+        $this->runVersioningMigration();
+
+        $this->assertSame(
+            'disabled',
+            DB::table('form_definitions')->where('name', 'parecer_final')->where('version', 1)->value('status')
+        );
+        $this->assertSame(
+            'active',
+            DB::table('form_definitions')->where('name', 'parecer_final')->where('version', 2)->value('status')
+        );
+        $this->assertSame(
+            ['version' => 1, 'status' => 'active'],
+            (array) DB::table('form_definitions')
+                ->where('name', 'outro_form')
+                ->select('version', 'status')
+                ->first()
+        );
+        $this->assertTrue(Schema::hasIndex('form_definitions', ['name', 'version'], 'unique'));
+    }
+
+    public function test_versioning_migration_rejects_ambiguous_null_versions(): void
+    {
+        $this->createLegacyDefinitionsTable(withVersion: true, withStatus: true);
+
+        DB::table('form_definitions')->insert([
+            $this->rawDefinitionPayload(name: 'parecer_final', version: null, status: 'active'),
+            $this->rawDefinitionPayload(name: 'parecer_final', version: null, status: 'active'),
+        ]);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('multiplas versoes NULL');
+
+        $this->runVersioningMigration();
+    }
+
+    public function test_versioning_migration_rejects_null_version_conflicting_with_version_one(): void
+    {
+        $this->createLegacyDefinitionsTable(withVersion: true, withStatus: true);
+
+        DB::table('form_definitions')->insert([
+            $this->rawDefinitionPayload(name: 'parecer_final', version: null, status: 'active'),
+            $this->rawDefinitionPayload(name: 'parecer_final', version: 1, status: 'disabled'),
+        ]);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('version NULL conflita com version 1');
+
+        $this->runVersioningMigration();
+    }
+
+    public function test_versioning_migration_rejects_duplicate_name_version(): void
+    {
+        $this->createLegacyDefinitionsTable(withVersion: true, withStatus: true);
+
+        DB::table('form_definitions')->insert([
+            $this->rawDefinitionPayload(name: 'parecer_final', version: 1, status: 'active'),
+            $this->rawDefinitionPayload(name: 'parecer_final', version: 1, status: 'disabled'),
+        ]);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('name + version duplicados');
+
+        $this->runVersioningMigration();
+    }
+
+    public function test_versioning_migration_rejects_invalid_version(): void
+    {
+        $this->createLegacyDefinitionsTable(withVersion: true, withStatus: true);
+
+        DB::table('form_definitions')->insert([
+            $this->rawDefinitionPayload(name: 'versao_invalida', version: 0, status: 'active'),
+        ]);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('versions invalidas');
+
+        $this->runVersioningMigration();
+    }
+
+    public function test_versioning_migration_rejects_invalid_status(): void
+    {
+        $this->createLegacyDefinitionsTable(withVersion: true, withStatus: true);
+
+        DB::table('form_definitions')->insert([
+            $this->rawDefinitionPayload(name: 'status_invalido', version: 1, status: 'enabled'),
+        ]);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('statuses invalidos');
+
+        $this->runVersioningMigration();
+    }
+
+    public function test_versioning_migration_enforces_database_constraints(): void
+    {
+        $this->createLegacyDefinitionsTable(withVersion: false, withStatus: false, uniqueName: true);
+
+        DB::table('form_definitions')->insert([
+            [
+                'name' => 'parecer_final',
+                'group' => 'workflow',
+                'description' => 'Legado',
+                'fields' => json_encode([['name' => 'resultado', 'type' => 'text']]),
+            ],
+        ]);
+
+        $this->runVersioningMigration();
+
+        $this->assertQueryFails(function () {
+            DB::table('form_definitions')->insert(
+                $this->rawDefinitionPayload(name: 'parecer_final', version: 2, status: 'active')
+            );
+        });
+
+        $this->assertQueryFails(function () {
+            DB::table('form_definitions')->insert(
+                $this->rawDefinitionPayload(name: 'status_nulo', version: 1, status: null)
+            );
+        });
+
+        $this->assertQueryFails(function () {
+            DB::table('form_definitions')->insert(
+                $this->rawDefinitionPayload(name: 'version_nula', version: null, status: 'active')
+            );
+        });
+
+        DB::table('form_definitions')->insert([
+            $this->rawDefinitionPayload(name: 'parecer_final', version: 2, status: 'disabled'),
+        ]);
+    }
+
     protected function definition(int $version = 1, bool $active = true, ?array $fields = null): FormDefinition
     {
         return FormDefinition::create($this->definitionPayload($version, $active, $fields));
@@ -348,5 +546,57 @@ class FormsV2Test extends TestCase
                 ['name' => 'resultado', 'type' => 'text', 'label' => 'Resultado', 'required' => true],
             ],
         ];
+    }
+
+    protected function createLegacyDefinitionsTable(bool $withVersion, bool $withStatus, bool $uniqueName = false): void
+    {
+        Schema::dropIfExists('form_submissions');
+        Schema::dropIfExists('form_definitions');
+        Schema::create('form_definitions', function (Blueprint $table) use ($withVersion, $withStatus, $uniqueName) {
+            $table->id();
+            $nameColumn = $table->string('name');
+            if ($uniqueName) {
+                $nameColumn->unique();
+            }
+            if ($withVersion) {
+                $table->unsignedInteger('version')->nullable();
+            }
+            if ($withStatus) {
+                $table->string('status')->nullable();
+            }
+            $table->string('group');
+            $table->string('description')->nullable();
+            $table->json('fields')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    protected function runVersioningMigration(): void
+    {
+        (require __DIR__ . '/../../database/migrations/2026_07_02_000000_update_form_definitions_for_versioning.php')->up();
+    }
+
+    protected function rawDefinitionPayload(string $name, ?int $version, ?string $status): array
+    {
+        return [
+            'name' => $name,
+            'version' => $version,
+            'status' => $status,
+            'group' => 'workflow',
+            'description' => 'Definicao',
+            'fields' => json_encode([['name' => 'resultado', 'type' => 'text']]),
+        ];
+    }
+
+    protected function assertQueryFails(callable $callback): void
+    {
+        try {
+            $callback();
+        } catch (QueryException) {
+            $this->addToAssertionCount(1);
+            return;
+        }
+
+        $this->fail('A query deveria falhar por restricao do banco.');
     }
 }
