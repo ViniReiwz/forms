@@ -39,6 +39,16 @@ class FormDefinition extends Model
     {
         parent::boot();
 
+        static::retrieved(function ($model) {
+            if (!array_key_exists('version', $model->attributes) || !$model->attributes['version']) {
+                $model->attributes['version'] = 1;
+            }
+
+            if (!array_key_exists('status', $model->attributes) || !$model->attributes['status']) {
+                $model->attributes['status'] = FormDefinitionStatus::Active->value;
+            }
+        });
+
         static::saving(function ($model) {
             $model->version = $model->version ?: 1;
             if (!$model->status) {

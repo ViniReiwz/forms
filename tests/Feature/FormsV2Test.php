@@ -132,6 +132,63 @@ class FormsV2Test extends TestCase
         );
     }
 
+    public function test_demo_command_supports_legacy_definitions_table_without_version_columns(): void
+    {
+        $this->createLegacyDefinitionsTable(withVersion: false, withStatus: false, uniqueName: true);
+
+        $this->artisan('forms:demo')
+            ->expectsOutput('Formulário criado com sucesso.')
+            ->expectsOutput('Dados de exemplo adicionados ao banco de dados.')
+            ->assertExitCode(0);
+
+        $this->assertDatabaseHas('form_definitions', [
+            'name' => 'Demo Form',
+            'group' => 'demo',
+        ]);
+    }
+
+    public function test_demo_command_replaces_existing_legacy_definition_without_version_columns(): void
+    {
+        $this->createLegacyDefinitionsTable(withVersion: false, withStatus: false, uniqueName: true);
+        DB::table('form_definitions')->insert([
+            'name' => 'Demo Form',
+            'group' => 'old',
+            'description' => 'Antigo',
+            'fields' => json_encode([]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->artisan('forms:demo')
+            ->expectsConfirmation('O formulário "Demo Form" já existe. Deseja substituir?', 'yes')
+            ->expectsOutput('Formulário substituído com sucesso.')
+            ->expectsOutput('Dados de exemplo adicionados ao banco de dados.')
+            ->assertExitCode(0);
+
+        $this->assertDatabaseHas('form_definitions', [
+            'name' => 'Demo Form',
+            'group' => 'demo',
+        ]);
+    }
+
+    public function test_legacy_definitions_without_version_columns_are_read_as_version_one_active(): void
+    {
+        $this->createLegacyDefinitionsTable(withVersion: false, withStatus: false, uniqueName: true);
+        DB::table('form_definitions')->insert([
+            'name' => 'Demo Form',
+            'group' => 'demo',
+            'description' => 'Legado',
+            'fields' => json_encode([]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $definition = FormDefinition::first();
+
+        $this->assertSame(1, $definition->version);
+        $this->assertSame(FormDefinitionStatus::Active, $definition->status);
+    }
+
     public function test_definition_direct_methods_are_equivalent_to_facade_methods(): void
     {
         $definition = $this->definition();
