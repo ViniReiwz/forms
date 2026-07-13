@@ -4,7 +4,7 @@ Este documento registra decisões arquiteturais tomadas durante a evolução par
 
 ## Forms como API oficial
 
-A facade `Uspdev\Forms\Facades\Forms` é a porta pública oficial da biblioteca. Ela encapsula `FormsService` e evita que consumidores externos dependam da classe interna `Form`.
+A facade `Uspdev\Forms\Facades\Forms` é a porta pública oficial da biblioteca. Ela encapsula `FormsManager` e evita que consumidores externos dependam da classe interna `Form`.
 
 A facade não concentra toda a implementação. Ela é a entrada estável para quem usa o pacote. Internamente, as responsabilidades ficam separadas em serviços próprios para definição, submissão, renderização e arquivos.
 
@@ -30,7 +30,7 @@ Quando duas formas públicas existem para o mesmo comportamento, elas devem usar
 
 `Uspdev\Forms\Form` permanece no pacote apenas como objeto interno de contexto para as views e para regras estáticas de validação reaproveitadas pelos serviços.
 
-Ela não é API pública recomendada e não concentra mais fluxos de submissão, renderização, consulta, upload, download ou auditoria. Essas responsabilidades ficam em `FormsService`, `FormRendererService`, `FormSubmissionService`, `FormSubmissionFileService` e nos models públicos.
+Ela não é API pública recomendada e não concentra mais fluxos de submissão, renderização, consulta, upload, download ou auditoria. Essas responsabilidades ficam em `FormsManager`, `FormRendererService`, `FormSubmissionService`, `FormSubmissionFileService` e nos models públicos.
 
 ## Versionamento aprovado
 

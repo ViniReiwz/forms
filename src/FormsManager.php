@@ -1,5 +1,12 @@
 <?php
 
+/**
+ * FormsManager coordena a API de alto nível da biblioteca de formulários.
+ *
+ * Ele resolve definições e submissões e delega operações especializadas aos
+ * serviços internos. A facade Forms é a entrada pública recomendada para
+ * consumidores externos; este manager é o serviço registrado no container.
+ */
 namespace Uspdev\Forms;
 
 use App\Models\User;
@@ -16,7 +23,7 @@ use Uspdev\Forms\Services\FormRendererService;
 use Uspdev\Forms\Services\FormSubmissionFileService;
 use Uspdev\Forms\Services\FormSubmissionService;
 
-class FormsService
+class FormsManager
 {
     /**
      * Renderiza o HTML de uma definição de formulário pelo nome.
