@@ -44,6 +44,14 @@ php artisan forms:sync --path=storage/app/formsJson
 
 O comando usa `name + version` para criar ou atualizar definições.
 
+## Formulário de demonstração
+
+Cria ou substitui uma definição de exemplo chamada `Demo Form`, útil para testar a instalação e visualizar os tipos de campos disponíveis.
+
+```bash
+php artisan forms:demo
+```
+
 ## Exemplo rápido
 
 ```php
