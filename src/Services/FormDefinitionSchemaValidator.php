@@ -59,6 +59,7 @@ class FormDefinitionSchemaValidator
         ];
 
         $messages = [
+            'name.unique' => 'Já existe um formulário com este nome e esta versão.',
             'flat_fields.*.type.in' => 'Tipo de campo nao suportado.',
             'flat_fields.*.width.min' => 'A largura do campo deve estar entre 1 e 12.',
             'flat_fields.*.width.max' => 'A largura do campo deve estar entre 1 e 12.',

@@ -36,9 +36,16 @@ class FormsV2Test extends TestCase
     public function test_name_and_version_are_unique_together(): void
     {
         $this->definition(version: 1);
-        $this->expectException(ValidationException::class);
 
-        $this->definition(version: 1);
+        try {
+            $this->definition(version: 1);
+            $this->fail('Era esperada uma exceção de validação.');
+        } catch (ValidationException $exception) {
+            $this->assertSame(
+                ['Já existe um formulário com este nome e esta versão.'],
+                $exception->errors()['name']
+            );
+        }
     }
 
     public function test_render_uses_submission_definition_for_editing(): void
