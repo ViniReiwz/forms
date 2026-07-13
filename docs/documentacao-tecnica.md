@@ -43,7 +43,7 @@ As definições de formulário são identificadas por `name + version`. Quando u
 
 A separação principal da V2 é entre definição e submissão.
 
-`FormDefinition` representa a estrutura do formulário: nome, versão, versão ativa, grupo, descrição e campos. É a parte que define como o formulário existe e é validado.
+`FormDefinition` representa a estrutura do formulário: nome, versão, versão ativa, metadado de grupo, descrição e campos. É a parte que define como o formulário existe e é validado. O papel e a obrigatoriedade de `group` como classificação de catálogo permanecem em aberto; veja [o papel de `group` na definição](models/form-definition.md#papel-de-group).
 
 `FormSubmission` representa os dados enviados por alguém. Cada submissão aponta para a definição usada no momento do envio por meio de `form_definition_id`, então uma submissão antiga continua ligada à versão exata do formulário que a criou.
 

@@ -29,6 +29,10 @@
 | field.width | inteiro entre 1 e 12 |
 | field.accept | string nullable quando informado |
 
+### Observação sobre `group`
+
+Embora o validador exija `group` atualmente, ele é tratado como metadado de catálogo: serve para organização e filtragem de definições, não para o funcionamento da engine de formulários ou para a identificação das submissões. A necessidade de mantê-lo obrigatório como contrato entre os consumidores permanece em aberto.
+
 ## Comportamento esperado
 
 Definições inválidas lançam `Illuminate\Validation\ValidationException`.

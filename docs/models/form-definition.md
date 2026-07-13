@@ -16,6 +16,14 @@ Uma `form_definition` descreve um formulário e sua estrutura de campos. Cada re
 | created_at | timestamp |
 | updated_at | timestamp |
 
+## Papel de `group`
+
+`group` é atualmente um metadado de organização e catalogação da definição. Ele permite filtrar definições pela API (`Forms::definitions($group)`), é exibido nas telas administrativas e de backup, é preservado nos JSONs de backup e sincronização e possui índice no banco para facilitar esse filtro.
+
+Esse campo não participa da resolução do formulário, que usa `name`, `version` e `status`, nem da renderização, da validação ou persistência de submissões, do versionamento, da autorização ou da identificação da submissão.
+
+A obrigatoriedade de `group` está em aberto: hoje ela é aplicada pelo formulário administrativo, pelo validador e pelo banco, mas sua permanência só se justifica como contrato deliberado de organização entre os consumidores. Caso esse contrato não seja necessário, o campo poderá se tornar opcional ou receber um valor padrão explícito em uma decisão futura.
+
 ## Regras de versionamento
 
 * `name` não é único isoladamente.
