@@ -30,8 +30,11 @@ class FormDefinitionSchemaValidator
 
     public function validate(array $definition, ?int $ignoreId = null): array
     {
+        unset($definition['flat_fields']);
         $definition['fields'] = $definition['fields'] ?? null;
-        $definition['flat_fields'] = $this->flattenFields($definition['fields']);
+        $flatFields = $this->flattenFields($definition['fields']);
+        $validationData = $definition;
+        $validationData['flat_fields'] = $flatFields;
 
         $rules = [
             'name' => [
@@ -65,12 +68,12 @@ class FormDefinitionSchemaValidator
             'flat_fields.*.width.max' => 'A largura do campo deve estar entre 1 e 12.',
         ];
 
-        $validator = Validator::make($definition, $rules, $messages);
+        $validator = Validator::make($validationData, $rules, $messages);
 
-        $validator->after(function ($validator) use ($definition) {
+        $validator->after(function ($validator) use ($definition, $flatFields) {
             $this->validateRows($validator, $definition['fields']);
-            $this->validateFieldNames($validator, $definition['flat_fields']);
-            $this->validateFieldSpecificRules($validator, $definition['flat_fields']);
+            $this->validateFieldNames($validator, $flatFields);
+            $this->validateFieldSpecificRules($validator, $flatFields);
         });
 
         if ($validator->fails()) {

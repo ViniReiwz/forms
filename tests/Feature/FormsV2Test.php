@@ -139,6 +139,24 @@ class FormsV2Test extends TestCase
         );
     }
 
+    public function test_flat_fields_is_derived_for_validation_but_not_persisted(): void
+    {
+        $fields = [[
+            ['name' => 'email', 'type' => 'email'],
+            ['name' => 'resultado', 'type' => 'text'],
+        ]];
+
+        $this->assertSame(
+            'created',
+            app(FormDefinitionSyncService::class)->syncDefinition(
+                $this->definitionPayload(fields: $fields)
+            )
+        );
+
+        $this->assertFalse(Schema::hasColumn('form_definitions', 'flat_fields'));
+        $this->assertArrayNotHasKey('flat_fields', FormDefinition::first()->getAttributes());
+    }
+
     public function test_demo_command_supports_legacy_definitions_table_without_version_columns(): void
     {
         $this->createLegacyDefinitionsTable(withVersion: false, withStatus: false, uniqueName: true);
