@@ -44,9 +44,6 @@ abstract class TestCase extends Orchestra
     {
         parent::setUp();
 
-        $this->artisan('migrate', [
-            '--path' => realpath(__DIR__ . '/../database/migrations'),
-            '--realpath' => true,
-        ])->run();
+        $this->artisan('migrate')->run();
     }
 }

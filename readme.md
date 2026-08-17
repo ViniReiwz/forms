@@ -19,9 +19,11 @@ Forms é uma biblioteca **uspdev** para criar formulários dinâmicos a partir d
 ```bash
 composer require uspdev/forms
 php artisan vendor:publish --tag=forms-config
-php artisan vendor:publish --tag=forms-migrations
 php artisan migrate
 ```
+
+As migrations do Forms V2 são carregadas diretamente pelo provider do pacote e não
+devem ser publicadas ou copiadas para a aplicação consumidora.
 
 ## Menu administrativo
 

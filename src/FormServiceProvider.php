@@ -24,13 +24,8 @@ class FormServiceProvider extends ServiceProvider
             __DIR__ . '/../config/uspdev-forms.php' => config_path('uspdev-forms.php'),
         ], 'forms-config');
 
-        // Publish migrations
-        $this->publishes([
-            __DIR__ . '/../database/migrations/' => database_path('migrations'),
-        ], 'forms-migrations');
-
-        // Load migrations
-        // $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
+        // Migrations are owned by the package and loaded directly by the provider.
+        $this->loadMigrationsFrom(__DIR__ . '/../database/migrations/v2');
         $this->loadViewsFrom(__DIR__ . '/../resources/views', 'uspdev-forms');
 
         // Load routes
