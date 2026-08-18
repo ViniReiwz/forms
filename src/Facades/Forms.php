@@ -5,11 +5,11 @@ namespace Uspdev\Forms\Facades;
 use Illuminate\Support\Facades\Facade;
 
 /**
- * @method static \Uspdev\Forms\Models\FormDefinition|null definition(string $name, ?int $version = null)
- * @method static \Uspdev\Forms\Models\FormDefinition|null activeDefinition(string $name)
+ * @method static \Uspdev\Forms\Models\FormDefinition definition(string $name, ?int $version = null)
+ * @method static \Uspdev\Forms\Models\FormDefinition activeDefinition(string $name)
  * @method static \Illuminate\Support\Collection definitions(?string $group = null)
  * @method static string render(string $name, int|array|null $versionOrOptions = null, array|\Uspdev\Forms\Models\FormSubmission $options = [], ?\Uspdev\Forms\Models\FormSubmission $submission = null)
- * @method static \Uspdev\Forms\Models\FormSubmission submit(\Illuminate\Http\Request $request)
+ * @method static \Uspdev\Forms\Models\FormSubmission submit(\Illuminate\Http\Request $request, ?string $name = null, ?int $version = null)
  * @method static \Uspdev\Forms\Models\FormSubmission update(\Illuminate\Http\Request $request, \Uspdev\Forms\Models\FormSubmission|int $submission)
  * @method static array validate(\Illuminate\Http\Request $request, ?string $name = null, ?int $version = null)
  * @method static \Uspdev\Forms\Models\FormSubmission|null submission(int $id)

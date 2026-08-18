@@ -3,7 +3,6 @@
 namespace Uspdev\Forms\Services;
 
 use App\Models\User;
-use InvalidArgumentException;
 use Illuminate\Support\Facades\Gate;
 use Uspdev\Forms\Form;
 use Uspdev\Forms\Models\FormDefinition;
@@ -18,13 +17,7 @@ class FormRendererService
             'version' => $definition->version,
         ]));
 
-        $html = $this->renderFromDefinition($form, $definition, $submission);
-
-        if ($html === null) {
-            throw new InvalidArgumentException("Form definition '{$definition->name}' nao encontrada.");
-        }
-
-        return $html;
+        return $this->renderFromDefinition($form, $definition, $submission);
     }
 
     public function listingForm(FormDefinition $definition, ?User $user = null): Form

@@ -25,6 +25,14 @@ use Uspdev\Forms\Services\FormSubmissionService;
 
 class FormsManager
 {
+    public function __construct(
+        protected FormRendererService $renderer,
+        protected FormSubmissionService $submissionsService,
+        protected FormSubmissionFileService $files,
+        protected FormDefinitionSyncService $definitionsSync
+    ) {
+    }
+
     /**
      * Renderiza o HTML de uma definição de formulário pelo nome.
      * Retorna a string HTML renderizada ou lança InvalidArgumentException
@@ -50,33 +58,62 @@ class FormsManager
             }
         }
 
-        $definition = $submission?->formDefinition ?? $this->definition($name, $version);
-        if (!$definition) {
-            throw new InvalidArgumentException("Form definition '{$name}' nao encontrada.");
+        $definition = $submission?->formDefinition;
+        if ($submission && !$definition) {
+            throw new InvalidArgumentException('A submissao nao possui definicao relacionada.');
         }
 
-        return app(FormRendererService::class)->render($definition, $options, $submission);
+        return $this->renderer->render(
+            $definition ?? $this->definition($name, $version),
+            $options,
+            $submission
+        );
     }
 
     /**
-     * Busca uma definição de formulário por nome e versão.
+     * Resolve uma definição por nome e versão, ou a versão ativa quando omitida.
+     *
+     * @throws InvalidArgumentException
      */
-    public function definition(string $name, ?int $version = null): ?FormDefinition
+    public function definition(string $name, ?int $version = null): FormDefinition
     {
-        return $version === null
-            ? $this->activeDefinition($name)
-            : FormDefinition::where('name', $name)->where('version', $version)->first();
-    }
+        if ($version === null) {
+            return $this->activeDefinition($name);
+        }
 
-    /**
-     * Busca a versão ativa de uma definição de formulário.
-     */
-    public function activeDefinition(string $name): ?FormDefinition
-    {
-        return FormDefinition::where('name', $name)
-            ->where('status', FormDefinitionStatus::Active->value)
-            ->orderByDesc('version')
+        $this->ensureValidVersion($version);
+
+        $definition = FormDefinition::where('name', $name)
+            ->where('version', $version)
             ->first();
+
+        if (!$definition) {
+            throw new InvalidArgumentException(
+                "A definicao do formulario '{$name}' na versao {$version} nao foi encontrada."
+            );
+        }
+
+        return $definition;
+    }
+
+    /**
+     * Resolve a versão ativa de uma definição de formulário.
+     *
+     * @throws InvalidArgumentException
+     */
+    public function activeDefinition(string $name): FormDefinition
+    {
+        $definition = FormDefinition::where('name', $name)
+            ->where('status', FormDefinitionStatus::Active->value)
+            ->first();
+
+        if (!$definition) {
+            throw new InvalidArgumentException(
+                "Nenhuma definicao ativa foi encontrada para o formulario '{$name}'."
+            );
+        }
+
+        return $definition;
     }
 
     /**
@@ -84,10 +121,16 @@ class FormsManager
      * Retorna FormSubmission em caso de sucesso ou lança ValidationException
      * ou RuntimeException quando a submissão não puder ser salva.
      */
-    public function submit(Request $request): FormSubmission
+    public function submit(
+        Request $request,
+        ?string $name = null,
+        ?int $version = null
+    ): FormSubmission
     {
-        $definition = $this->resolveDefinitionFromRequest($request);
-        return app(FormSubmissionService::class)->submit($request, $definition);
+        return $this->submissionsService->submit(
+            $request,
+            $this->resolveDefinitionFromRequest($request, $name, $version)
+        );
     }
 
     /**
@@ -104,7 +147,7 @@ class FormsManager
             throw new InvalidArgumentException('A submissao nao possui definicao relacionada.');
         }
 
-        return app(FormSubmissionService::class)->update($request, $submission);
+        return $this->submissionsService->update($request, $submission);
     }
 
     /**
@@ -129,13 +172,12 @@ class FormsManager
     }
 
     /**
-     * Lista submissões, opcionalmente filtradas por nome de formulário e chave.
-     * Retorna uma Collection de FormSubmission; se o formulário informado não
-     * existir, retorna uma Collection vazia.
+     * Valida os dados usando a definição informada ou resolvida pelo request,
+     * sem criar ou atualizar uma submissão.
      */
     public function validate(Request $request, ?string $name = null, ?int $version = null): array
     {
-        return app(FormSubmissionService::class)->validateData(
+        return $this->submissionsService->validateData(
             $request,
             $this->resolveDefinitionFromRequest($request, $name, $version)
         );
@@ -148,10 +190,6 @@ class FormsManager
     {
         $definition = $this->definition($name, $version);
 
-        if (!$definition) {
-            return collect();
-        }
-
         return FormSubmission::query()
             ->where('form_definition_id', $definition->id)
             ->when($key !== null, fn ($query) => $query->where('key', $key))
@@ -160,8 +198,8 @@ class FormsManager
 
     /**
      * Filtra submissões de um formulário por campo armazenado no JSON data.
-     * Retorna uma Collection com os resultados, uma Collection vazia se a
-     * definição não existir, ou lança InvalidArgumentException para operador inválido.
+     * Lança InvalidArgumentException quando a definição ou o operador forem
+     * inválidos.
      */
     public function filterSubmissions(
         string $name,
@@ -181,10 +219,6 @@ class FormsManager
         }
 
         $definition = $this->definition($name, $version);
-
-        if (!$definition) {
-            return collect();
-        }
 
         $jsonField = "data->{$field}";
         $query = FormSubmission::query()
@@ -214,7 +248,7 @@ class FormsManager
      */
     public function downloadFile(FormSubmission|int $submission, string $fieldName): BinaryFileResponse
     {
-        return app(FormSubmissionFileService::class)->download($this->resolveSubmission($submission), $fieldName);
+        return $this->files->download($this->resolveSubmission($submission), $fieldName);
     }
 
     /**
@@ -224,7 +258,7 @@ class FormsManager
      */
     public function deleteSubmission(FormSubmission|int $submission, ?User $user = null): FormSubmission|false
     {
-        return app(FormSubmissionFileService::class)->deleteWithActivity($this->resolveSubmission($submission), $user);
+        return $this->files->deleteWithActivity($this->resolveSubmission($submission), $user);
     }
 
     /**
@@ -232,10 +266,18 @@ class FormsManager
      */
     public function submissionActivities(FormSubmission|int $submission, int $take = 20): Collection
     {
-        $submissionId = $submission instanceof FormSubmission ? $submission->id : $submission;
+        if ($take < 1) {
+            throw new InvalidArgumentException('A quantidade de atividades deve ser um inteiro positivo.');
+        }
+
+        $submission = $submission instanceof FormSubmission
+            ? $submission
+            : FormSubmission::withTrashed()->findOrFail($submission);
+        $subjectType = $submission->getMorphClass();
 
         return Activity::orderBy('created_at', 'DESC')
-            ->where('subject_id', $submissionId)
+            ->where('subject_type', $subjectType)
+            ->where('subject_id', $submission->id)
             ->take($take)
             ->get();
     }
@@ -245,7 +287,9 @@ class FormsManager
      */
     public function activity(int $id): Activity
     {
-        return Activity::findOrFail($id);
+        return Activity::query()
+            ->where('subject_type', (new FormSubmission())->getMorphClass())
+            ->findOrFail($id);
     }
 
     /**
@@ -255,7 +299,7 @@ class FormsManager
      */
     public function syncFromDirectory(string $directory): array
     {
-        return app(FormDefinitionSyncService::class)->syncFromDirectory($directory);
+        return $this->definitionsSync->syncFromDirectory($directory);
     }
 
     /**
@@ -277,24 +321,94 @@ class FormsManager
         ?string $name = null,
         ?int $version = null
     ): FormDefinition {
-        if ($request->filled('form_definition_id')) {
-            return FormDefinition::findOrFail((int) $request->input('form_definition_id'));
+        $definitionId = $this->definitionIdFromRequest($request);
+        $requestName = $request->input('form_definition');
+
+        if ($name !== null && $requestName !== null && $name !== $requestName) {
+            throw new InvalidArgumentException(
+                'Os identificadores da definicao informados no request nao correspondem.'
+            );
         }
 
-        $name = $name ?? $request->input('form_definition') ?? $request->input('name');
-        $version = $version ?? ($request->filled('version') ? (int) $request->input('version') : null);
+        $name = $name ?? $requestName ?? $request->input('name');
+        $version = $this->versionFromRequest($request, $version);
 
-        if (!$name) {
-            throw new InvalidArgumentException('Definicao de formulario nao informada.');
+        if ($name) {
+            $definition = $this->definition((string) $name, $version);
+
+            if ($definitionId !== null && $definitionId !== $definition->id) {
+                throw new InvalidArgumentException(
+                    'Os identificadores da definicao informados no request nao correspondem.'
+                );
+            }
+
+            return $definition;
         }
 
-        $definition = $this->definition($name, $version);
+        if ($definitionId !== null) {
+            $definition = FormDefinition::find($definitionId);
 
-        if (!$definition) {
-            throw new InvalidArgumentException("Form definition '{$name}' nao encontrada.");
+            if (!$definition) {
+                throw new InvalidArgumentException(
+                    "A definicao de formulario com id {$definitionId} nao foi encontrada."
+                );
+            }
+
+            return $definition;
         }
 
-        return $definition;
+        throw new InvalidArgumentException('Definicao de formulario nao informada.');
     }
 
+    protected function versionFromRequest(Request $request, ?int $version): ?int
+    {
+        $requestVersion = null;
+        if ($request->filled('version')) {
+            $requestVersion = filter_var($request->input('version'), FILTER_VALIDATE_INT, [
+                'options' => ['min_range' => 1],
+            ]);
+
+            if ($requestVersion === false) {
+                throw new InvalidArgumentException('A versao da definicao deve ser um inteiro positivo.');
+            }
+        }
+
+        if ($version !== null) {
+            $this->ensureValidVersion($version);
+
+            if ($requestVersion !== null && $requestVersion !== $version) {
+                throw new InvalidArgumentException(
+                    'Os identificadores da definicao informados no request nao correspondem.'
+                );
+            }
+
+            return $version;
+        }
+
+        return $requestVersion;
+    }
+
+    protected function definitionIdFromRequest(Request $request): ?int
+    {
+        if (!$request->filled('form_definition_id')) {
+            return null;
+        }
+
+        $definitionId = filter_var($request->input('form_definition_id'), FILTER_VALIDATE_INT, [
+            'options' => ['min_range' => 1],
+        ]);
+
+        if ($definitionId === false) {
+            throw new InvalidArgumentException('O id da definicao deve ser um inteiro positivo.');
+        }
+
+        return $definitionId;
+    }
+
+    protected function ensureValidVersion(int $version): void
+    {
+        if ($version < 1) {
+            throw new InvalidArgumentException('A versao da definicao deve ser um inteiro positivo.');
+        }
+    }
 }

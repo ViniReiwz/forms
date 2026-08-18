@@ -33,6 +33,39 @@ class FormsV2Test extends TestCase
         $this->assertSame(1, Forms::definition('parecer_final', 1)->version);
     }
 
+    public function test_definition_resolution_reports_missing_active_and_exact_versions_clearly(): void
+    {
+        $this->definition(version: 1, active: false);
+
+        try {
+            Forms::definition('parecer_final');
+            $this->fail('Era esperada uma excecao para a definicao ativa inexistente.');
+        } catch (\InvalidArgumentException $exception) {
+            $this->assertSame(
+                "Nenhuma definicao ativa foi encontrada para o formulario 'parecer_final'.",
+                $exception->getMessage()
+            );
+        }
+
+        try {
+            Forms::definition('parecer_final', 99);
+            $this->fail('Era esperada uma excecao para a versao inexistente.');
+        } catch (\InvalidArgumentException $exception) {
+            $this->assertSame(
+                "A definicao do formulario 'parecer_final' na versao 99 nao foi encontrada.",
+                $exception->getMessage()
+            );
+        }
+    }
+
+    public function test_definition_resolution_rejects_non_positive_versions(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('A versao da definicao deve ser um inteiro positivo.');
+
+        Forms::definition('parecer_final', 0);
+    }
+
     public function test_name_and_version_are_unique_together(): void
     {
         $this->definition(version: 1);
@@ -82,6 +115,31 @@ class FormsV2Test extends TestCase
         $this->assertSame(0, FormSubmission::count());
     }
 
+    public function test_render_and_validate_resolve_the_same_explicit_definition(): void
+    {
+        $this->definition(version: 1, active: false, fields: [
+            ['name' => 'resultado_v1', 'type' => 'text', 'label' => 'Resultado V1', 'required' => true],
+        ]);
+        $v2 = $this->definition(version: 2, active: true, fields: [
+            ['name' => 'resultado_v2', 'type' => 'text', 'label' => 'Resultado V2', 'required' => true],
+        ]);
+
+        $html = Forms::render('parecer_final', 1);
+
+        $this->assertStringContainsString('name="version" value="1"', $html);
+        $this->assertStringContainsString('name="resultado_v1"', $html);
+        $this->assertStringNotContainsString('name="resultado_v2"', $html);
+
+        $validated = Forms::validate(Request::create('/', 'POST', [
+            'form_definition' => 'parecer_final',
+            'version' => 1,
+            'resultado_v1' => 'aprovado',
+        ]));
+
+        $this->assertSame(['resultado_v1' => 'aprovado'], $validated);
+        $this->assertSame(2, $v2->version);
+    }
+
     public function test_submit_creates_submission_and_update_uses_original_definition(): void
     {
         $v1 = $this->definition(version: 1, active: false, fields: [
@@ -103,6 +161,74 @@ class FormsV2Test extends TestCase
 
         $this->expectException(ValidationException::class);
         Forms::update(Request::create('/', 'POST', ['resultado_v2' => 'novo']), $submission);
+    }
+
+    public function test_submit_accepts_explicit_definition_without_request_metadata(): void
+    {
+        $v1 = $this->definition(version: 1, active: false);
+        $this->definition(version: 2, active: true);
+
+        $submission = Forms::submit(
+            Request::create('/', 'POST', [
+                'form_key' => 'workflow-123',
+                'resultado' => 'aprovado',
+            ]),
+            'parecer_final',
+            1
+        );
+
+        $this->assertSame($v1->id, $submission->form_definition_id);
+        $this->assertSame(1, $submission->formDefinition->version);
+    }
+
+    public function test_submit_rejects_inconsistent_definition_identifiers(): void
+    {
+        $v1 = $this->definition(version: 1, active: false);
+        $this->definition(version: 2, active: true);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Os identificadores da definicao informados no request nao correspondem.');
+
+        Forms::submit(Request::create('/', 'POST', [
+            'form_definition_id' => $v1->id,
+            'form_definition' => 'parecer_final',
+            'version' => 2,
+            'resultado' => 'aprovado',
+        ]));
+    }
+
+    public function test_submit_rejects_request_version_that_conflicts_with_explicit_version(): void
+    {
+        $this->definition(version: 1, active: false);
+        $this->definition(version: 2, active: true);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Os identificadores da definicao informados no request nao correspondem.');
+
+        Forms::submit(
+            Request::create('/', 'POST', [
+                'form_definition' => 'parecer_final',
+                'version' => 2,
+                'resultado' => 'aprovado',
+            ]),
+            'parecer_final',
+            1
+        );
+    }
+
+    public function test_invalid_data_uses_laravel_validation_errors_without_persisting(): void
+    {
+        $this->definition();
+
+        try {
+            Forms::submit(Request::create('/', 'POST', [
+                'form_definition' => 'parecer_final',
+            ]));
+            $this->fail('Era esperada uma excecao de validacao.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('resultado', $exception->errors());
+            $this->assertSame(0, FormSubmission::count());
+        }
     }
 
     public function test_submission_queries_respect_version_and_filter_operators(): void
@@ -362,8 +488,55 @@ class FormsV2Test extends TestCase
         $this->assertCount(2, $activities);
         $this->assertSame([$newer->id, $older->id], $activities->pluck('id')->all());
         $this->assertCount(2, Forms::submissionActivities($submission->id, 2));
-        $this->assertCount(0, Forms::submissionActivities(999999, 2));
         $this->assertSame('mais recente', Forms::activity($newer->id)->description);
+    }
+
+    public function test_submit_and_update_produce_scoped_audit_through_the_forms_mechanism(): void
+    {
+        $definition = $this->definition();
+
+        $submission = Forms::submit(Request::create('/', 'POST', [
+            'form_definition' => 'parecer_final',
+            'version' => 1,
+            'resultado' => 'rascunho',
+        ]));
+        Forms::update(Request::create('/', 'POST', ['resultado' => 'aprovado']), $submission);
+
+        Activity::create([
+            'log_name' => 'default',
+            'description' => 'activity de outro tipo',
+            'subject_type' => FormDefinition::class,
+            'subject_id' => $submission->id,
+            'properties' => [],
+        ]);
+
+        $activities = Forms::submissionActivities($submission);
+
+        $this->assertNotEmpty($activities);
+        $this->assertTrue($activities->every(
+            fn (Activity $activity) => $activity->subject_type === $submission->getMorphClass()
+        ));
+        $this->assertTrue($activities->contains(fn (Activity $activity) => $activity->event === 'created'));
+        $this->assertTrue($activities->contains(fn (Activity $activity) => $activity->event === 'updated'));
+        $this->assertSame($definition->id, $submission->form_definition_id);
+    }
+
+    public function test_audit_remains_available_by_id_after_submission_is_deleted(): void
+    {
+        $definition = $this->definition();
+        $submission = FormSubmission::create([
+            'form_definition_id' => $definition->id,
+            'key' => 'workflow-123',
+            'data' => ['resultado' => 'aprovado'],
+        ]);
+
+        Forms::deleteSubmission($submission);
+
+        $activities = Forms::submissionActivities($submission->id);
+
+        $this->assertTrue($activities->contains(
+            fn (Activity $activity) => $activity->event === 'deleted'
+        ));
     }
 
     public function test_definition_service_creates_updates_and_purges_trashed_submissions(): void

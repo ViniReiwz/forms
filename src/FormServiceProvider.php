@@ -84,9 +84,7 @@ class FormServiceProvider extends ServiceProvider
             'uspdev-forms'
         );
 
-        $this->app->singleton(FormsManager::class, function () {
-            return new FormsManager();
-        });
+        $this->app->singleton(FormsManager::class);
 
         $this->app->alias(FormsManager::class, 'forms');
     }
