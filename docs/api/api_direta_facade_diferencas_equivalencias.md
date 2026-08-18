@@ -24,7 +24,7 @@ Estes comportamentos existem nas duas abordagens. As chamadas delegam para a mes
 | ----- | -------------- | ---------- | ----------------- |
 | Renderizar formulário | `Forms::render($name, $versionOrOptions = null, $options = [], $submission = null)` | `$definition->render($options = [], $submission = null)` | A facade resolve a definição; a API direta parte de uma `FormDefinition`. |
 | Validar sem persistir | `Forms::validate($request, $name = null, $version = null)` | `$definition->validateData($request)` | A facade pode resolver a definição pelo request, `name` ou `version`; a API direta já sabe qual definição valida os dados. |
-| Criar submissão | `Forms::submit($request)` | `$definition->submit($request)` | A facade resolve a definição a partir do request; a API direta cria a submissão a partir da definição carregada. |
+| Criar submissão | `Forms::submit($request, $name = null, $version = null)` | `$definition->submit($request)` | A facade resolve a definição a partir do request ou dos argumentos explícitos; a API direta cria a submissão a partir da definição carregada. |
 | Atualizar submissão | `Forms::update($request, $submission)` | `$submission->updateFromRequest($request)` | A facade aceita id/model e padroniza o fluxo; a API direta atualiza a submissão carregada. |
 | Baixar arquivo | `Forms::downloadFile($submission, $field)` | `$submission->download($field)` | A facade aceita a submissão como entrada; a API direta parte da submissão concreta. |
 | Excluir submissão | `Forms::deleteSubmission($submission, $user = null)` | `$submission->deleteWithActivity($user = null)` | A facade padroniza a chamada; a API direta expressa que a exclusão pertence à submissão. |
@@ -35,8 +35,8 @@ Estes fluxos localizam, resolvem, listam, filtram ou sincronizam entidades. Eles
 
 | Método | Por que fica na facade |
 | ------ | ---------------------- |
-| `Forms::definition($name, $version = null)` | Localiza uma definição por `name + version` ou pela versão ativa. Antes da chamada, ainda não há `FormDefinition` carregada. |
-| `Forms::activeDefinition($name)` | Resolve explicitamente a versão ativa de um formulário lógico. |
+| `Forms::definition($name, $version = null)` | Resolve uma definição por `name + version` ou pela versão ativa e lança `InvalidArgumentException` quando ela não existir. Antes da chamada, ainda não há `FormDefinition` carregada. |
+| `Forms::activeDefinition($name)` | Resolve explicitamente a versão ativa de um formulário lógico e lança `InvalidArgumentException` quando ela não existir. |
 | `Forms::definitions($group = null)` | Lista definições, opcionalmente por grupo. |
 | `Forms::submission($id)` | Localiza uma submissão por id. Antes da chamada, ainda não há `FormSubmission` carregada. |
 | `Forms::submissions($name, $version = null, $key = null)` | Consulta submissões a partir de uma definição resolvida por `name` e `version`. |

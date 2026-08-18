@@ -12,7 +12,7 @@ Forms é uma biblioteca **uspdev** para criar formulários dinâmicos a partir d
 * Mantém submissões presas a uma versão concreta de `FormDefinition`.
 * Possui CRUD administrativo.
 * Suporta Bootstrap 4 e 5.
-* Integra com Laravel 11 em diante.
+* Requer Laravel 12.
 
 ## Instalação
 
@@ -80,6 +80,16 @@ public function store(Request $request)
     return redirect()->back()->with('alert-success', 'Formulário enviado com sucesso.');
 }
 ```
+
+Em integrações sem o HTML gerado pelo pacote, informe a definição diretamente:
+
+```php
+$submission = Forms::submit($request, 'parecer_final', 2);
+```
+
+Definições ou versões inexistentes lançam `InvalidArgumentException`; dados
+inválidos lançam `ValidationException`. A assinatura completa e os demais
+fluxos públicos estão em [API via facade](docs/api/api_facade.md).
 
 ## Documentação
 

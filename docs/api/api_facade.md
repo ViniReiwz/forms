@@ -53,6 +53,11 @@ $definition = Forms::activeDefinition('parecer_final');
 $definitions = Forms::definitions('workflow');
 ```
 
+`definition()` e `activeDefinition()` sempre retornam uma definição. Se o
+`name` não possuir versão ativa, se a versão explícita não existir ou se a
+versão for menor que `1`, os métodos lançam `InvalidArgumentException` com o
+nome e, quando aplicável, a versão que não pôde ser resolvida.
+
 ## Renderização
 
 ```php
@@ -116,6 +121,7 @@ Outros métodos HTTP não fazem parte do contrato público de `Forms::render()`.
 
 ```php
 $submission = Forms::submit($request);
+$submission = Forms::submit($request, 'parecer_final', 2);
 $submission = Forms::update($request, $submission);
 $submission = Forms::submission($id);
 $submissions = Forms::submissions('parecer_final', key: 'workflow-123');
@@ -123,6 +129,13 @@ $submissions = Forms::submissions('parecer_final', 2, 'workflow-123');
 ```
 
 `submit` e `update` retornam `FormSubmission` ou lançam exceção, como `ValidationException`. A API pública não retorna strings ou arrays de erro legados.
+
+No fluxo vindo de `render()`, o request já contém `form_definition_id`,
+`form_definition` e `version`. Em integrações sem HTML, o consumidor pode
+passar `name` e `version` diretamente a `submit()`, sem montar esses campos
+internos no request. Quando mais de um identificador estiver presente, todos
+devem apontar para a mesma definição; divergências lançam
+`InvalidArgumentException` antes da validação ou persistência.
 
 ## Uso sem persistência
 
@@ -187,7 +200,26 @@ $activities = Forms::submissionActivities($submission, 20);
 $activity = Forms::activity($activityId);
 ```
 
-`submissionActivities()` retorna as activities mais recentes de uma submissão. `activity()` busca uma activity específica pelo id ou lança `ModelNotFoundException`.
+`submissionActivities()` retorna somente as activities cujo subject é a
+submissão informada. Um id de submissão inexistente lança
+`ModelNotFoundException`; submissões removidas por soft delete continuam
+consultáveis para fins de auditoria. `activity()` busca uma activity de
+submissão específica pelo id ou lança `ModelNotFoundException`; activities de
+outros tipos não atravessam esse contrato público.
+
+## Erros do contrato
+
+| Situação | Exceção |
+| -------- | ------- |
+| definição sem versão ativa | `InvalidArgumentException` |
+| versão explícita inexistente ou menor que `1`; versão não inteira recebida no request | `InvalidArgumentException` |
+| identificadores de definição divergentes no request | `InvalidArgumentException` |
+| dados incompatíveis com os campos da definição | `ValidationException`, com os erros por campo |
+| submissão ou activity de submissão inexistente | `ModelNotFoundException` |
+
+Falhas de resolução e validação acontecem antes da criação de uma submissão.
+O consumidor não precisa consultar models ou serviços internos para distinguir
+esses erros.
 
 ## Sincronização
 
