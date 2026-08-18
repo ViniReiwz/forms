@@ -3,6 +3,7 @@
     "description": "Formulários dinâmicos com persistência",
     "type": "library",
     "minimum-stability": "dev",
+    "prefer-stable": true,
     "license": "GPL-2.0-or-later",
     "autoload": {
         "psr-4": {
@@ -22,8 +23,8 @@
         "spatie/laravel-activitylog": "^4.10"
     },
     "require-dev": {
-        "orchestra/testbench": "^9.0",
-        "phpunit/phpunit": "^10.5"
+        "orchestra/testbench": "^10.0",
+        "phpunit/phpunit": "^11.5"
     },
     "autoload-dev": {
         "psr-4": {
