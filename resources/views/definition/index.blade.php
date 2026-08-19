@@ -22,6 +22,7 @@
         <thead>
           <tr>
             <th>Nome</th>
+            <th>Versão</th>
             <th>Grupo</th>
             <th>Descrição</th>
             <th>Ações</th>
@@ -38,6 +39,14 @@
                 <span class="badge badge-danger badge-pill" title="Submissões excluídas">
                   {{ $formDefinition->formSubmissions()->onlyTrashed()->count() }}
                 </span>
+              </td>
+              <td>
+                {{ $formDefinition->version }}
+                @if ($formDefinition->status->value === 'active')
+                  <span class="badge badge-success">ativa</span>
+                @else
+                  <span class="badge badge-secondary">{{ $formDefinition->status->value }}</span>
+                @endif
               </td>
               <td>
                 {{ $formDefinition->group }}

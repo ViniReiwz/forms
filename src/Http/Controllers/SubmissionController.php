@@ -4,10 +4,10 @@ namespace Uspdev\Forms\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Gate;
-use Uspdev\Forms\Form;
+use Uspdev\Forms\Facades\Forms;
 use Uspdev\Forms\Models\FormDefinition;
 use Uspdev\Forms\Models\FormSubmission;
+use Uspdev\Forms\Services\FormRendererService;
 
 class SubmissionController extends Controller
 {
@@ -21,16 +21,10 @@ class SubmissionController extends Controller
     {
         \UspTheme::activeUrl(route('form-definitions.index'));
 
-        $config = [
-            'editable' => true,
-            'name' => $formDefinition->name,
-            'action' => route('form-submissions.store', $formDefinition->id),
-        ];
-        $form = new Form($config);
-        $form->user = Auth::user();
-        $form->admin = Gate::allows('manager', $form->user) ? true : false;
+        $form = app(FormRendererService::class)->listingForm($formDefinition, Auth::user());
+        $submissions = $formDefinition->formSubmissions()->get();
 
-        return view('uspdev-forms::submission.index', compact('form', 'formDefinition'));
+        return view('uspdev-forms::submission.index', compact('form', 'formDefinition', 'submissions'));
     }
 
     public function create(FormDefinition $formDefinition)
@@ -41,8 +35,7 @@ class SubmissionController extends Controller
             'key' => null,
             'action' => route('form-submissions.store', $formDefinition),
         ];
-        $form = new Form($config);
-        $formHtml = $form->generateHtml($formDefinition->name);
+        $formHtml = Forms::render($formDefinition->name, $formDefinition->version, $config);
 
         return view('uspdev-forms::submission.edit', [
             'definition' => $formDefinition,
@@ -55,7 +48,7 @@ class SubmissionController extends Controller
     {
         \UspTheme::activeUrl(route('form-definitions.index'));
 
-        $formHtml = (new Form(['method' => 'PUT']))->generateHtml($formDefinition->name, $formSubmission);
+        $formHtml = Forms::render($formDefinition->name, ['method' => 'PUT'], $formSubmission);
 
         return view('uspdev-forms::submission.edit')->with([
             'formHtml' => $formHtml,
@@ -66,7 +59,7 @@ class SubmissionController extends Controller
 
     public function store(FormDefinition $formDefinition, Request $request)
     {
-        $submission = (new Form(['editable' => true]))->handleSubmission($request);
+        $submission = self::processSubmission(fn () => Forms::submit($request));
 
         if ($submission instanceof FormSubmission) {
             return redirect()->route('form-submissions.index', $formDefinition)
@@ -89,8 +82,7 @@ class SubmissionController extends Controller
 
     public static function update(Request $request, FormDefinition $formDefinition, FormSubmission $formSubmission)
     {
-        $submission = (new Form(['editable' => true]))
-            ->updateSubmission($request, $formSubmission->id);
+        $submission = self::processSubmission(fn () => Forms::update($request, $formSubmission));
 
         if ($submission instanceof FormSubmission) {
             return redirect(route('form-submissions.index', $formDefinition))
@@ -113,7 +105,7 @@ class SubmissionController extends Controller
 
     public static function destroy(FormDefinition $formDefinition, FormSubmission $formSubmission)
     {
-        $form = (new Form())->deleteSubmission($formSubmission->id, Auth::user());
+        Forms::deleteSubmission($formSubmission, Auth::user());
 
         return redirect(route('form-submissions.index', $formDefinition))
             ->with('alert-success', 'Submissão enviada para lixeira com sucesso!');
@@ -121,6 +113,20 @@ class SubmissionController extends Controller
 
     public function downloadFile($formDefinition, FormSubmission $formSubmission, $fieldName)
     {
-        return (new Form())->downloadSubmissionFile($formSubmission, $fieldName);
+        return Forms::downloadFile($formSubmission, $fieldName);
+    }
+
+    protected static function processSubmission(callable $callback): FormSubmission|array|string
+    {
+        try {
+            return $callback();
+        } catch (\Illuminate\Validation\ValidationException $exception) {
+            return [
+                'status' => 'error',
+                'errors' => $exception->validator->errors(),
+            ];
+        } catch (\Throwable $exception) {
+            return $exception->getMessage();
+        }
     }
 }

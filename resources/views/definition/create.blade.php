@@ -28,9 +28,26 @@
         @endisset
         @csrf
         <div class="form-group">
-          <label for="name">Nome do formulário (não repetido) <span class="text-danger">*</span></label>
+          <label for="name">Nome do formulário <span class="text-danger">*</span></label>
           <input type="text" id="name" name="name" class="form-control"
             value="{{ old('name', $formDefinition->name ?? '') }}" required>
+        </div>
+
+        <div class="form-group">
+          <label for="version">Versão <span class="text-danger">*</span></label>
+          <input type="number" id="version" name="version" min="1" class="form-control"
+            value="{{ old('version', $formDefinition->version ?? 1) }}" required>
+        </div>
+
+        <div class="form-group">
+          <label for="status">Status <span class="text-danger">*</span></label>
+          <select id="status" name="status" class="form-control" required>
+            @foreach (['draft' => 'Rascunho', 'active' => 'Ativa', 'disabled' => 'Desativada'] as $value => $label)
+              <option value="{{ $value }}" @selected(old('status', isset($formDefinition) ? $formDefinition->status->value : 'active') === $value)>
+                {{ $label }}
+              </option>
+            @endforeach
+          </select>
         </div>
 
         <div class="form-group">

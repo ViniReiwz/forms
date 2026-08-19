@@ -2,12 +2,11 @@
 
 namespace Uspdev\Forms\Http\Controllers;
 
-use Error;
 use Exception;
-use File;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Artisan;
 use Uspdev\Forms\Models\FormDefinition;
+use Uspdev\Forms\Services\FormDefinitionBackupService;
+use Uspdev\Forms\Services\FormDefinitionService;
 
 class DefinitionController extends Controller
 {
@@ -22,7 +21,7 @@ class DefinitionController extends Controller
     {
         \UspTheme::activeUrl(route('form-definitions.index'));
 
-        $formDefinitions = FormDefinition::all();
+        $formDefinitions = app(FormDefinitionService::class)->definitions();
         // Inidica a aba de 'index' como ativa na view
         $activeTab = 'index';
         return view('uspdev-forms::definition.index', compact('formDefinitions','activeTab'));
@@ -41,14 +40,7 @@ class DefinitionController extends Controller
 
     public function store(Request $request)
     {
-        $fields = json_decode($request->input('fields'), true);
-
-        FormDefinition::create([
-            'name'        => $request->input('name'),
-            'group'       => $request->input('group'),
-            'description' => $request->input('description'),
-            'fields'      => $fields,
-        ]);
+        app(FormDefinitionService::class)->createFromRequest($request);
 
         return redirect()->route('form-definitions.index')
             ->with('alert-success', 'Definição criada com sucesso!');
@@ -62,11 +54,7 @@ class DefinitionController extends Controller
 
     public function update(Request $request, FormDefinition $formDefinition)
     {
-        $formDefinition->fields = json_decode($request->input('fields'), true);
-
-        $formDefinition->save();
-
-        $formDefinition->update($request->only(['name', 'group', 'description']));
+        app(FormDefinitionService::class)->updateFromRequest($request, $formDefinition);
 
         return redirect()->route('form-definitions.index')
             ->with('alert-success', 'Definição atualizada com sucesso!');
@@ -80,13 +68,15 @@ class DefinitionController extends Controller
     public function destroy(FormDefinition $formDefinition, Request $request)
     {
         if ($request->destroy_trashed) {
-            $formDefinition->formSubmissions()->onlyTrashed()->forceDelete();
+            app(FormDefinitionService::class)->purgeTrashedSubmissions($formDefinition);
+
             return redirect()->route('form-definitions.index')
                 ->with('alert-success', 'Registros excluídos limpado com sucesso!');
         }
 
         try {
-            $formDefinition->delete();
+            app(FormDefinitionService::class)->delete($formDefinition);
+
             return redirect()->route('form-definitions.index')
                 ->with('alert-success', 'Definição excluída com sucesso!');
         } catch (Exception $e) {
@@ -106,18 +96,7 @@ class DefinitionController extends Controller
      */
     public function backup_def(FormDefinition $formDefinition)
     {
-
-        $file_dir = config("uspdev-forms.forms_storage_dir");
-        if(!is_dir($file_dir))
-        {
-            mkdir($file_dir,0777,true);
-        }
-
-        $file_path = $file_dir . "/" . $formDefinition['name'] . '@' . now()->format('d-m-Y_H:i:s') . ".json";
-        $json_file = fopen($file_path, "w");
-
-        fwrite($json_file, json_encode($formDefinition,JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-        fclose($json_file);
+        app(FormDefinitionBackupService::class)->backup($formDefinition);
 
         return redirect()->back()->with('alert-success','Backup de: '. $formDefinition['name'] .' gerado com sucesso em: ' . now() . '!');
 
@@ -131,12 +110,7 @@ class DefinitionController extends Controller
      */
     public function backup_all()
         {
-            $form_definitions = FormDefinition::all();
-
-            foreach($form_definitions as $form_definition)
-            {
-                $this->backup_def($form_definition);
-            }
+            app(FormDefinitionBackupService::class)->backupAll();
 
             return redirect()->back()->with('alert-success','Backups gerados em: ' . now() . ' com sucesso!');
         }
@@ -154,7 +128,7 @@ class DefinitionController extends Controller
 
         // Indica que a aba ativa atualmente é a de backups
         $activeTab = 'backup';
-        $formDefinitions = FormDefinition::all();
+        $formDefinitions = app(FormDefinitionService::class)->definitions();
         return view('uspdev-forms::definition.backup', compact('activeTab','formDefinitions'));
     }
 
@@ -166,24 +140,7 @@ class DefinitionController extends Controller
      */
     public function list_backups(FormDefinition $formDefinition)
     {
-        // Percorre todos os backups existentes e filtra pelo nome (relacionados à $formDefinition->name)
-        $bckp_files = scandir(config('uspdev-forms.forms_storage_dir'));
-        $bckp_files = array_filter($bckp_files, function($filename) use ($formDefinition) { return str_contains($filename,$formDefinition->name); });
-
-        $backup_data = [];
-
-        // Percorre todos os backups da definition, recuperando a data de criação e a data da última alteração
-        // todo: se nao estiver no formato esperado, pode gerar um erro, tratar isso. ex: sem @ ou sem extensão .json
-        foreach($bckp_files as $filename)
-        {
-            $created_time = explode('@',$filename)[1];
-            $created_time = explode('.',$created_time)[0];
-
-            $last_mod_time = date('d-m-Y_H:i:s',filemtime(config('uspdev-forms.forms_storage_dir') .'/'.$filename));
-
-            // Grava no formato: tempo_criado => tempo_ultima_mod
-            $backup_data[$created_time] = $last_mod_time;
-        }
+        $backup_data = app(FormDefinitionBackupService::class)->list($formDefinition);
 
         return view('uspdev-forms::definition.backup-list', ['formDefinition' => $formDefinition, 'backup_data' => $backup_data]);
     }
@@ -198,15 +155,7 @@ class DefinitionController extends Controller
      */
     public function restore_backup(FormDefinition $formDefinition, string $created_time)
     {
-        // Remonta o tempo de criaão no formato correto
-        $created_time = str_replace(' - ','_',$created_time);
-        $created_time = str_replace('/','-',$created_time);
-
-        // Remonta o nome do arquivo seguindo a formatação nomeform@tempoquecrioubckp.json
-        $filename = $formDefinition->name . '@' . $created_time . '.json';
-
-        // Chama o comando 'form:sync', passando o camiho do arquivo desejado como parâmetro, restaurando apenas aquela definição, mantendo intacta as demais
-        Artisan::call('form:sync',['--path' => config('uspdev-forms.forms_storage_dir') . '/' .$filename]);
+        $created_time = app(FormDefinitionBackupService::class)->restore($formDefinition, $created_time);
 
         return redirect()->back()->with('alert-success','Backup de ' . $created_time . ' restaurado com sucesso !');
     }
@@ -220,27 +169,14 @@ class DefinitionController extends Controller
      */
     public function remove_backup(FormDefinition $formDefinition, string $created_time)
     {
-        $created_time = str_replace(' - ','_',$created_time);
-        $created_time = str_replace('/','-',$created_time);
+        $removed = app(FormDefinitionBackupService::class)->remove($formDefinition, $created_time);
+        $filename = $formDefinition->name . '@' . str_replace([' - ', '/'], ['_', '-'], $created_time) . '.json';
 
-        // Remonta o nome do arquivo
-        $filename = $formDefinition->name . '@' . $created_time . '.json';
-
-        // Remonta o caminho completo do arquivo
-        $filepath = config('uspdev-forms.forms_storage_dir') . '/' . $filename;
-
-        // Caso o arquivo exista no caminho remontado anteriormente, o remove
-        if(File::exists($filepath))
-        {
-            File::delete($filepath);
+        if($removed) {
             return redirect()->back()->with('alert-warning','Backup ' . $filename . ' removido com sucesso.' );
         }
 
-        // Caso contrário, exibe uma mensagem de erro.
-        else
-        {
-            return redirect()->back()->with('alert-danger', 'Impossível remover ' . $filename .' => arquivo não existe.');
-        }
+        return redirect()->back()->with('alert-danger', 'Impossível remover ' . $filename .' => arquivo não existe.');
     }
 
     /**
@@ -251,24 +187,7 @@ class DefinitionController extends Controller
      */
     public function remove_def_backups(FormDefinition $formDefinition)
     {
-        // Recupera o diretório em que os backups são salvos
-        $file_dir = config('uspdev-forms.forms_storage_dir');
-
-        // Filtra os arquivos pelos nomes que contém o nome da definição
-        $files = array_filter(scandir($file_dir),function($filename) use ($formDefinition){return str_contains($filename,$formDefinition->name);});
-
-        // Percorre todos os arquivos
-        foreach($files as $filename)
-        {
-            // Reconstrói o caminho dos arquivo
-            $filepath = $file_dir . '/' . $filename;
-
-            // Verifica a existência e deleta em caso afirmativo
-            if(File::exists($filepath));
-            {
-                File::delete($filepath);
-            }
-        }
+        app(FormDefinitionBackupService::class)->removeForDefinition($formDefinition);
 
         return redirect()->back()->with('alert-warning', 'Backups de ' . $formDefinition->name . ' removidos com sucesso.');
     }
@@ -279,24 +198,7 @@ class DefinitionController extends Controller
      */
     public function remove_all_backup()
     {
-        // Recupera o diretório em que os arquivos são salvos
-        $file_dir = config('uspdev-forms.forms_storage_dir');
-
-        // Filtra para obter apenas os arquivos .json(evita '.' e '..', além de possível lixo)
-        $files = array_filter(scandir($file_dir), function($file) { return str_contains($file,'.json'); });
-
-        // Percorre todos os arquivos do diretório
-        foreach($files as $filename)
-        {
-            // Reconstrói o caminho do arquivo
-            $filepath = $file_dir . '/' . $filename;
-
-            // Verifica se o mesmo existe, e o deleta em caso afirmativo
-            if(File::exists($filepath))
-            {
-                File::delete($filepath);
-            }
-        }
+        app(FormDefinitionBackupService::class)->removeAll();
 
         return redirect()->back()->with('alert-warning', 'Backups removidos com sucesso.');
 

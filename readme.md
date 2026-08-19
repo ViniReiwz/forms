@@ -1,29 +1,33 @@
 # Forms
 
-Forms é uma biblioteca **uspdev** que permite gerar formulários dinâmicos a partir de definições armazenadas em banco de dados e, opcionalmente, persiste os resultados.
+Forms é uma biblioteca **uspdev** para criar formulários dinâmicos a partir de definições persistidas, renderizar HTML, validar submissões, persistir respostas e manipular arquivos enviados.
 
 ## Funcionalidades
 
-- Gera formulários a partir de definições no BD;
-- Processa a submissão dos formulários com validação e persistência;
-- Mostra o resultado com views padrão;
-- Possui crud completo para `admin`;
-- Suporta estilos em Bootstrap 4 e 5;
-- Integra com aplicações Laravel 11 em diante.
+* Gera formulários a partir de definições armazenadas no banco.
+* Processa submissões com validação e persistência.
+* Permite validar dados sem persistir submissões.
+* Suporta versões de definição por `name + version`.
+* Usa a versão ativa quando `version` é omitida em chamadas públicas.
+* Mantém submissões presas a uma versão concreta de `FormDefinition`.
+* Possui CRUD administrativo.
+* Suporta Bootstrap 4 e 5.
+* Requer Laravel 12.
 
 ## Instalação
 
-1. **Instale a biblioteca via Composer e publique as migrations**
-
 ```bash
 composer require uspdev/forms
-php artisan vendor:publish --tag=forms-migrations
+php artisan vendor:publish --tag=forms-config
 php artisan migrate
 ```
 
-2. **Menu na aplicação**
+As migrations do Forms V2 são carregadas diretamente pelo provider do pacote e não
+devem ser publicadas ou copiadas para a aplicação consumidora.
 
-No arquivo `config/laravel-usp-theme.php`, adicione ou reposicione a chave uspdev-forms para mostrar o menu. Ele será visível apenas para administradores.
+## Menu administrativo
+
+No arquivo `config/laravel-usp-theme.php`, a chave `uspdev-forms` faz o menu ficar visível apenas para administradores.
 
 ```php
 [
@@ -31,349 +35,62 @@ No arquivo `config/laravel-usp-theme.php`, adicione ou reposicione a chave uspde
 ],
 ```
 
-## Configuração
+## Sincronização de formulários
 
-Você pode personalizar as configurações do pacote modificando o arquivo `config/uspdev-forms.php`.
+Sincroniza definições em `.json` para `form_definitions`.
 
-    php artisan vendor:publish --tag=forms-config
+```bash
+php artisan forms:sync
+php artisan forms:sync --path=storage/app/formsJson
+```
 
-## Formulário demo
+O comando usa `name + version` para criar ou atualizar definições.
 
-Popula o banco com um formulário de demonstração com vários tipos de campos, facilitando testes rápidos.
+## Formulário de demonstração
+
+Cria ou substitui uma definição de exemplo chamada `Demo Form`, útil para testar a instalação e visualizar os tipos de campos disponíveis.
 
 ```bash
 php artisan forms:demo
 ```
 
-## Sincronização de formulários
-
-Sincroniza definições de formulários em `.json` para a tabela `form_definitions` de forma idempotente (create ou update).
-
-```bash
-php artisan forms:sync
-```
-
-Por padrão, o comando lê os arquivos do diretório configurado em `uspdev-forms.forms_storage_dir`.
-
-Opcionalmente, você pode informar outro diretório:
-
-```bash
-php artisan forms:sync --path=storage/app/formsJson
-```
-    
-## Uso
-
-1. **Crie uma entrada na tabela form_definitions**
-
-2. Nome do formulário: nome único que identifica o formulário
-
-3. Grupo: serve para agrupar vários formulários em implementações mais complexas
-
-4. Descrição: campo livre sem uso específico no sistema
-
-5. Campos: campos do formulário
-
-    OBS.: **Os campos USP dependem do replicado**.
-
-6. Em todos os campos pode ser definido a diretiva **validation_rule** com a validação dos campos Laravel conforme a documentação.
-
-   OBS.: **Campos são validados pelo tipo definido em type.** Por exemplo, campos do tipo "number" serão validados pela validação do Laravel "numeric". 
-
-* **texto de 1 linha**
-
-```json
-[
-    {
-      "name": "name",
-      "type": "text",
-      "label": "Nome (text)",
-      "required": true,
-      "validation_rule": "max:150"
-    },
-]
-```
-* **dois campos na mesma linha**
-
-```json
-  [
-    {
-      "name": "name",
-      "type": "text",
-      "label": "Nome (text)",
-      "required": true
-    },
-    {
-      "name": "email",
-      "type": "email",
-      "label": "Email (email)",
-      "required": false,
-      "validation_rule":"max:150"
-    }
-  ],
-```
-
-* select simples
-
-```json
-[
-  {
-    "name": "rating",
-    "type": "select",
-    "label": "Avaliação (select)",
-    "options": [
-      "1",
-      "2",
-      "3",
-      "4",
-      "5"
-    ],
-    "validation_rule":"exists:ranking,id"
-  },
-]
-```
-
-* textarea
-
-```json
-[
-  {
-    "name": "message",
-    "type": "textarea",
-    "label": "Mensagem (textarea)"
-  },
-]
-```
-
-* file (upload de arquivo)
-
-```json
-[
-  {
-    "name": "arquivo",
-    "type": "file",
-    "label": "Arquivo",
-    "accept": ".pdf, image/*"
-  },
-]
-```
-
-* **pessoa-usp**
-
-```json
-[
-  {
-    "name": "codpes",
-    "type": "pessoa-usp",
-    "label": "Pessoa USP",
-    "required": true
-  },
-]
-```
-
-* disciplina-usp
-
-```json
-[
-  {
-    "name": "coddis",
-    "type": "disciplina-usp",
-    "label": "Disciplina USP",
-    "required": true
-  },
-]
-```
-
-* patrimonio-usp
-
-```json
-[
-  {
-    "name": "numpat",
-    "type": "patrimonio-usp",
-    "label": "Patrimônio USP",
-    "required": true
-  },
-]
-```
-
-* local-usp
-
-```json
-[
-  {
-    "name": "codlocusp",
-    "type": "local-usp",
-    "label": "Local USP",
-    "required": true
-  },
-]
-```
-
-* data 
-  
-```json
-[
-  {
-    "name": "data",
-    "type": "date",
-    "label": "Campo de data",
-    "required": true
-  },
-]
-```
-
-    FormDefinition::create($form);
-
-
-2. **Gere o formulário na sua view:**
-
-Use a classe FormGenerator para renderizar o formulário no seu template Blade:
+## Exemplo rápido
 
 ```php
-use Uspdev\Forms\Form;
+use Uspdev\Forms\Facades\Forms;
 
-$form = new Form($key = null, ['action' => route('forms.action')]);
-$formHtml = $form->generateHtml('demo'); // conforme definido em $form
-
-// ....
+$html = Forms::render('parecer_final', [
+    'action' => route('pareceres.store'),
+]);
 ```
 
-3. **Trate as submissões do formulário:**
-
-No seu controller, trate a submissão do formulário salvando os dados no banco de dados:
-
 ```php
+use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
+use Uspdev\Forms\Facades\Forms;
+
 public function store(Request $request)
 {
-  $form = (new Form())->handleSubmission($request);
-  
-  // ....
-}
-```
-**OBS.: caso exista no $request a chave id ($request->id) o formulário anteriormente submetido com este id será atualizado.**
-**Caso existam erros de validação, o método retorna um array com as seguintes informações: [$validated['status'=>'error','errors'=>[dados do erro],'data'=>[dados preenchidos no formulário]],String HTMLFormulário preenchido]**
+    try {
+        $submission = Forms::submit($request);
+    } catch (ValidationException $e) {
+        return back()->withErrors($e->validator)->withInput();
+    }
 
-Exemplo de tratamento de erros:
-```php
-       $message = [
-            'max'=>'O campo :attribute pode ter no máximo :max caracteres',
-            'required_if'=>'O campo :attribute precisa ser informado.',
-            'data_saida.after_or_equal'=>'O campo data saída deve ter um valor posterior à data de hoje',
-            'data_retorno.after_or_equal'=>'O campo data retorno deve ter um valor posterior à data informada na data de saída',
-            'date_format'=>'O formato de data deve ser HH:MM'
-        ];
-        
-        $form = (new Form(['editable'=>true]))->handleSubmission($request);
-        if (is_array($form))
-        {
-            $erros = '<li>';
-            foreach($form['validated']['errors']->getMessages() as $field=>$value) // Instância de MessageBag (Laravel)
-            {
-                foreach($value as $e)
-                {
-                    $nomE = explode('.',$e);
-                    if (!empty($message[$field.".".$nomE[1]])) $erros.="<ul>".$message[$field.".".$nomE[1]]."</ul>"; 
-                    else $erros.="<ul>".str_replace(":attribute",$field,$message[$nomE[1]])."</ul>";
-
-                }
-                
-            }
-            $erros.='</li>';
-
-            session(['alert_danger'=>$erros]); //precisa mostrar os erros na view no caso dessa varíavel existir
-           
-            return view('view-aplicacao.create',['html'=>$form['formHtml']]); //formulário preenchido
-        }
-```
-
-4. **Listar submissões**
-Recupere todas as submissões em geral ou de um formulário específico:
-
-```php
-$allSubmissions = $form->listSubmission();
-
-// Ou
-
-$allFormNameSubmissions = $form->listSubmission('form-name');
-```
-
-5. **Obter submissão**
-Recupere uma submissão específica pelo seu id:
-
-```php
-$formSubmission = $form->getSubmission($formSubmissionId);
-```
-
-6. **Download de arquivo**
-Faça o download de um arquivo de uma submissão através do nome do campo:
-
-```php
-$formSubmission = $form->downloadSubmissionFile($formSubmission, $fieldName);
-```
-OBS.: Os arquivos são armazenados em storage/app/formsubmissions/&lt;ano&gt;/id&lt;00&gt;-&lt;hash&gt;.&lt;ext&gt;. Caso tenha problemas de download verifique se os arquivos estão no local correto.
-
-## Campos
-
-### Tipos
-
-* pessoa-usp: campo tipo select que faz busca no replicado e retorna uma pessoa. nome do campo recomendado: codpes;
-* disciplina-usp: campo tipo select que faz busca no replicado e retorna uma disciplina. nome do campo recomendado: coddis;
-* patrimonio-usp: campo tipo select que faz busca no replicado e retorna um bem patrimoniado. nome do campo recomendado: numpat;
-* local-usp: campo tipo select que faz busca no replicado e retorna um local da usp já formatado. nome do campo recomendado: codlocusp;
-* data: data simples no formato dd/mm/aaaa;
-* text: texto simples (linha única);
-  * pode passar `"maxlength": 100` para limitar a quantidade de caracteres;
-* number: campo numérico;
-  * pode passar `"min"`, `"max"` e `"step"` para definir limites e incremento;
-* email: valida campos email;
-* select: precisa passar `options`;
-* textarea: parágrafos;
-* file: pode passar `"accept" : ".pdf, image/*"`;
-
-### Atributos adicionais por campo
-
-#### width para todos os campos
-
-O atributo `width` define a largura do campo no grid do Bootstrap (`col-1` até `col-12`).
-
-```json
-{
-  "type": "text",
-  "name": "nome",
-  "width": 6
+    return redirect()->back()->with('alert-success', 'Formulário enviado com sucesso.');
 }
 ```
 
-HTML gerado:
+Em integrações sem o HTML gerado pelo pacote, informe a definição diretamente:
 
-```html
-<div class="col-6">
-  <input type="text" name="nome">
-</div>
+```php
+$submission = Forms::submit($request, 'parecer_final', 2);
 ```
 
-## Contribuindo
+Definições ou versões inexistentes lançam `InvalidArgumentException`; dados
+inválidos lançam `ValidationException`. A assinatura completa e os demais
+fluxos públicos estão em [API via facade](docs/api/api_facade.md).
 
-Contribuições são bem-vindas! Siga estes passos para contribuir:
+## Documentação
 
-- Faça um fork do repositório.
-- Crie um novo branch (git checkout -b feature/SuaFuncionalidade).
-- Faça suas alterações e commit (git commit -m 'Adiciona nova funcionalidade').
-- Envie para o branch (git push origin feature/SuaFuncionalidade).
-- Crie um novo Pull Request.
-
-
-### Resumo do Conteúdo
-- **Visão Geral do Pacote**: Descreve o que o pacote faz.
-- **Funcionalidades**: Destaca as principais funcionalidades.
-- **Passos de Instalação**: Fornece instruções detalhadas de instalação.
-- **Detalhes de Configuração**: Guia sobre como personalizar as configurações.
-- **Exemplos de Uso**: Mostra como criar um formulário YAML e usá-lo na sua aplicação.
-- **Guia de Contribuição**: Incentiva contribuições com passos claros.
-- **Informações de Licença**: Indica a licença
-
-
-
-
-
-
+Comece por [Documentação técnica](docs/documentacao-tecnica.md). Ela organiza os demais documentos na ordem recomendada de leitura.

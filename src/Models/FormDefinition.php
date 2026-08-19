@@ -2,11 +2,14 @@
 
 namespace Uspdev\Forms\Models;
 
+use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Uspdev\Forms\Enums\FormDefinitionStatus;
 use Uspdev\Forms\Models\FormSubmission;
-use Illuminate\Validation\ValidationException;
-use Illuminate\Support\Facades\Validator;
+use Uspdev\Forms\Services\FormDefinitionSchemaValidator;
+use Uspdev\Forms\Services\FormRendererService;
+use Uspdev\Forms\Services\FormSubmissionService;
 
 class FormDefinition extends Model
 {
@@ -21,18 +24,13 @@ class FormDefinition extends Model
     {
         return [
             'fields' => 'array',
+            'version' => 'integer',
+            'status' => FormDefinitionStatus::class,
         ];
     }
 
     /**
      * Sobrescreve o método boot do Eloquent Model.
-     *
-     * Registra o evento "saving" para validar os atributos da definição do formulário antes de salvar:
-     * - name, group e description com regras básicas de string e tamanho
-     * - fields como array obrigatório
-     * - flatFields.*.name deve ser único e obrigatório
-     *
-     * Se algum campo não atender às regras, lança uma ValidationException.
      *
      * @return void
      * @throws \Illuminate\Validation\ValidationException
@@ -41,28 +39,41 @@ class FormDefinition extends Model
     {
         parent::boot();
 
-        static::saving(function ($model) {
-            $rules = [
-                'name'        => 'required|string|max:255|unique:form_definitions,name,' . $model->id,
-                'group'       => 'required|string|max:255',
-                'description' => 'nullable|string|max:255',
-                'fields'      => 'required|array',
-                'flat_fields.*.name' => 'required|string|distinct',
-            ];
-
-            $messages = [
-                'flat_fields.*.name.distinct' => 'Os nomes dos campos devem ser únicos.',
-                'flat_fields.*.name.required' => 'O nome de cada campo é obrigatório.',
-            ];
-
-            $data = $model->attributesToArray();
-            $data['flat_fields'] = $model->flattenFields();
-
-            $validator = Validator::make($data, $rules, $messages);
-
-            if ($validator->fails()) {
-                throw new ValidationException($validator);
+        static::retrieved(function ($model) {
+            if (!array_key_exists('version', $model->attributes) || !$model->attributes['version']) {
+                $model->attributes['version'] = 1;
             }
+
+            if (!array_key_exists('status', $model->attributes) || !$model->attributes['status']) {
+                $model->attributes['status'] = FormDefinitionStatus::Active->value;
+            }
+        });
+
+        static::saving(function ($model) {
+            $model->version = $model->version ?: 1;
+            if (!$model->status) {
+                $model->status = FormDefinitionStatus::Active;
+            }
+
+            app(FormDefinitionSchemaValidator::class)->validate([
+                'name' => $model->name,
+                'version' => $model->version,
+                'status' => $model->status instanceof FormDefinitionStatus
+                    ? $model->status->value
+                    : $model->status,
+                'group' => $model->group,
+                'description' => $model->description,
+                'fields' => $model->fields,
+            ], $model->id);
+
+            if ($model->status !== FormDefinitionStatus::Active) {
+                return;
+            }
+
+            static::where('name', $model->name)
+                ->when($model->exists, fn ($query) => $query->where('id', '!=', $model->id))
+                ->where('status', FormDefinitionStatus::Active->value)
+                ->update(['status' => FormDefinitionStatus::Disabled->value]);
         });
     }
 
@@ -99,5 +110,20 @@ class FormDefinition extends Model
     public function formSubmissions(): HasMany
     {
         return $this->hasMany(FormSubmission::class);
+    }
+
+    public function render(array $options = [], ?FormSubmission $submission = null): string
+    {
+        return app(FormRendererService::class)->render($this, $options, $submission);
+    }
+
+    public function validateData(Request $request): array
+    {
+        return app(FormSubmissionService::class)->validateData($request, $this);
+    }
+
+    public function submit(Request $request): FormSubmission
+    {
+        return app(FormSubmissionService::class)->submit($request, $this);
     }
 }

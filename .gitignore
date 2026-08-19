@@ -1,0 +1,29 @@
+# Composer dependencies
+/vendor/
+/composer.lock
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# PHPUnit
+.phpunit.result.cache
+/coverage/
+/build/
+
+# Laravel and package development artifacts
+/storage/*.key
+/storage/framework/cache/data/
+/storage/framework/sessions/
+/storage/framework/testing/
+/storage/framework/views/
+/storage/logs/
+/bootstrap/cache/*.php
+
+# IDE and editor files
+/.idea/
+/.vscode/
+*.swp
+*.swo
+*~

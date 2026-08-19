@@ -5,10 +5,15 @@ namespace Uspdev\Forms\Services;
 use InvalidArgumentException;
 use JsonException;
 use RuntimeException;
+use Uspdev\Forms\Enums\FormDefinitionStatus;
 use Uspdev\Forms\Models\FormDefinition;
 
 class FormDefinitionSyncService
 {
+    public function __construct(protected FormDefinitionSchemaValidator $validator)
+    {
+    }
+
     // Sincroniza as definições de formulários a partir dos arquivos JSON encontrados em um diretório.
     public function syncFromDirectory(string $directory): array
     {
@@ -20,6 +25,7 @@ class FormDefinitionSyncService
             'created' => 0,
             'updated' => 0,
             'unchanged' => 0,
+            'ignored' => 0,
             'messages' => [],
             'errors' => [],
         ];
@@ -34,6 +40,9 @@ class FormDefinitionSyncService
 
                 $result['synced']++;
                 $result[$syncStatus]++;
+                if ($syncStatus === 'unchanged') {
+                    $result['ignored']++;
+                }
                 $result['messages'][] = basename($filePath) . ' -> ' . $syncStatus;
         
             } catch (\Throwable $e) {
@@ -47,7 +56,14 @@ class FormDefinitionSyncService
     // Sincroniza uma definição de formulário no banco de dados. Retorna 'created', 'updated' ou 'unchanged' dependendo do resultado.
     public function syncDefinition(array $definition): string
     {
-        $existent = FormDefinition::where('name', $definition['name'])->first();
+        $definition['status'] = $this->normalizeStatus($definition);
+
+        $name = $definition['name'] ?? null;
+        $version = $definition['version'] ?? null;
+        $existent = ($name && $version)
+            ? FormDefinition::where('name', $name)->where('version', $version)->first()
+            : null;
+        $definition = $this->validator->validate($definition, $existent?->id);
 
         if (!$existent) {
             FormDefinition::create($definition);
@@ -63,6 +79,11 @@ class FormDefinitionSyncService
         }
 
         return 'unchanged';
+    }
+
+    public function syncFromFile(string $filePath): string
+    {
+        return $this->syncDefinition($this->readDefinitionFromFile($filePath));
     }
 
     // Lista os arquivos .json em um diretório, ignorando subdiretórios e arquivos que não sejam JSON. 
@@ -116,20 +137,25 @@ class FormDefinitionSyncService
             throw new RuntimeException('A definicao deve ser um objeto JSON.');
         }
 
-        if (empty($decoded['name']) || empty($decoded['group']) || !isset($decoded['fields'])) {
-            throw new RuntimeException('Campos obrigatorios ausentes: name, group, fields.');
-        }
-
-        if (!is_array($decoded['fields'])) {
-            throw new RuntimeException('O campo fields deve ser um array.');
-        }
-
         return [
-            'name' => $decoded['name'],
-            'group' => $decoded['group'],
+            'name' => $decoded['name'] ?? null,
+            'version' => $decoded['version'] ?? null,
+            'status' => $decoded['status'] ?? null,
+            'group' => $decoded['group'] ?? null,
             'description' => $decoded['description'] ?? null,
-            'fields' => $decoded['fields'],
+            'fields' => $decoded['fields'] ?? null,
         ];
+    }
+
+    protected function normalizeStatus(array $definition): string
+    {
+        if (!empty($definition['status'])) {
+            return $definition['status'] instanceof FormDefinitionStatus
+                ? $definition['status']->value
+                : (string) $definition['status'];
+        }
+
+        return FormDefinitionStatus::Active->value;
     }
     // Resolve um caminho de diretório, tratando caminhos relativos e verificando se o diretório existe. 
     // Retorna o caminho absoluto do diretório.

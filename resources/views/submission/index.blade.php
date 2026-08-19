@@ -15,7 +15,11 @@
       </div>
     </div>
     <div class="card-body">
-      <x-uspdev-forms::submissions-table :form="$form"></x-uspdev-forms::submissions-table>
+      <x-uspdev-forms::submissions-table
+        :form="$form"
+        :definition="$formDefinition"
+        :submissions="$submissions"
+      ></x-uspdev-forms::submissions-table>
     </div>
   </div>
 @endsection

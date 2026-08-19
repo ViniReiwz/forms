@@ -3,12 +3,16 @@
 namespace Uspdev\Forms\Models;
 
 use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Uspdev\Forms\Models\FormDefinition;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Uspdev\Forms\Services\FormSubmissionFileService;
+use Uspdev\Forms\Services\FormSubmissionService;
 
 class FormSubmission extends Model
 {
@@ -43,6 +47,21 @@ class FormSubmission extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function download(string $fieldName): BinaryFileResponse
+    {
+        return app(FormSubmissionFileService::class)->download($this, $fieldName);
+    }
+
+    public function updateFromRequest(Request $request): self
+    {
+        return app(FormSubmissionService::class)->update($request, $this);
+    }
+
+    public function deleteWithActivity(?User $user = null): self|false
+    {
+        return app(FormSubmissionFileService::class)->deleteWithActivity($this, $user);
     }
 
     /**

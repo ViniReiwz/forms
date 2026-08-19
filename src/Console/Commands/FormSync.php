@@ -29,6 +29,7 @@ class FormSync extends Command
             $this->line('Criados: ' . $result['created']);
             $this->line('Atualizados: ' . $result['updated']);
             $this->line('Sem alteracoes: ' . $result['unchanged']);
+            $this->line('Ignorados: ' . $result['ignored']);
 
             foreach ($result['messages'] as $message) {
                 $this->line('- ' . $message);
@@ -48,10 +49,12 @@ class FormSync extends Command
 
         elseif(is_file($syncPath))
         {
-            
-            $content = file_get_contents($syncPath);
-            $definition = json_decode($content,true);
-            app(FormDefinitionSyncService::class)->syncDefinition($definition);
+            try {
+                app(FormDefinitionSyncService::class)->syncFromFile($syncPath);
+            } catch (\Throwable $e) {
+                $this->error('Erro ao sincronizar: ' . $e->getMessage());
+                return self::FAILURE;
+            }
 
             $this->info('Sincronizacao concluida com sucesso.');
             return self::SUCCESS;
